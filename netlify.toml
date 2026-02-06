@@ -6,3 +6,4 @@
   NODE_VERSION = "20"
   # Disable automatic framework detection
   NETLIFY_SKIP_NEXTJS_PLUGIN = "true"
+  NETLIFY_NEXTJS_SKIP_ON_BUILD_STEP = "true"
