@@ -4,3 +4,5 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # Disable automatic framework detection
+  NETLIFY_SKIP_NEXTJS_PLUGIN = "true"
