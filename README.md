@@ -1,103 +1,73 @@
+# React + TypeScript + Vite
 
-# BoxBreath
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-**BoxBreath** is a simple and elegant breathing app designed to help users practice box breathing (square breathing). The app guides users through four phases of breathing: inhale, hold after inhale, exhale, and hold after exhale. Each phase is visually represented with dynamic animations and color changes to help you focus and relax.
+Currently, two official plugins are available:
 
-## Features
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-- **Four Breathing Phases**: Inhale, Hold After Inhale, Exhale, Hold After Exhale.
-- **Dynamic Animations**: Smooth expanding and contracting circles.
-- **Color-Coded Phases**: Each breathing phase is represented with a unique color for better visualization.
-  - **Inhale**: Green
-  - **Hold After Inhale**: Red
-  - **Exhale**: Sky Blue
-  - **Hold After Exhale**: Red
-- **Command Display**: Clear text instructions such as "Breathe In," "Hold Breath," and "Breathe Out."
-- **Calming Interface**: Minimalist design with a dark background to reduce distractions.
+## React Compiler
 
-## Getting Started
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-### Prerequisites
+## Expanding the ESLint configuration
 
-Ensure you have the following installed on your system:
-- [Node.js](https://nodejs.org/) (version 16 or higher)
-- [npm](https://www.npmjs.com/) (comes with Node.js)
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-### Installation
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/boxbreath.git
-   ```
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
 
-2. Navigate to the project directory:
-   ```bash
-   cd boxbreath
-   ```
-
-3. Install the dependencies:
-   ```bash
-   npm install
-   ```
-
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-5. Open your browser and navigate to:
-   ```
-   http://localhost:3000
-   ```
-
-## Usage
-
-1. Run the app locally or deploy it to your preferred hosting platform.
-2. Follow the visual and textual cues to practice square breathing.
-3. Use it daily to improve focus, relaxation, and mindfulness.
-
-## Project Structure
-
-```
-boxbreath/
-├── public/              # Static assets
-├── src/
-│   ├── components/      # Reusable React components (e.g., BreathingApp.tsx)
-│   ├── pages/           # Next.js pages
-│   ├── styles/          # Global styles (e.g., Tailwind CSS configuration)
-├── README.md            # Project documentation
-├── package.json         # Project dependencies and scripts
-└── next.config.js       # Next.js configuration
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-## Technologies Used
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-- **Framework**: [Next.js](https://nextjs.org/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Language**: TypeScript
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-## How It Works
-
-1. The app cycles through the four phases of breathing:
-   - **Inhale**: Expand the circle and turn green.
-   - **Hold After Inhale**: Circle stays expanded and turns red.
-   - **Exhale**: Contract the circle and turn sky blue.
-   - **Hold After Exhale**: Circle stays contracted and turns red.
-2. Each phase lasts for 4 seconds by default.
-
-## Contributing
-
-Contributions are welcome! If you have any ideas for features or improvements, please open an issue or submit a pull request.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Inspired by mindfulness and breathing techniques for relaxation and focus.
-- Designed for simplicity and ease of use.
-
----
-
-**Enjoy practicing mindfulness and relaxation with BoxBreath!**
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```

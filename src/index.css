@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-muted: hsl(var(--muted));
+  --color-accent: hsl(var(--accent));
+
+  --color-inhale: hsl(140 100% 50%);
+  --color-hold: hsl(45 100% 50%);
+  --color-exhale: hsl(190 100% 50%);
+
+  --animate-breath-in: breath-in 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  --animate-breath-hold: breath-hold 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  --animate-breath-out: breath-out 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+
+  @keyframes breath-in {
+    0% {
+      transform: scale(1);
+      opacity: 0.3;
+    }
+
+    100% {
+      transform: scale(1.5);
+      opacity: 1;
+    }
+  }
+
+  @keyframes breath-out {
+    0% {
+      transform: scale(1.5);
+      opacity: 1;
+    }
+
+    100% {
+      transform: scale(1);
+      opacity: 0.3;
+    }
+  }
+}
+
+@layer base {
+  :root {
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+    --card: 224 71% 4%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 160 84% 39%;
+    --muted: 223 47% 11%;
+    --accent: 262 83% 58%;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    margin: 0;
+    display: flex;
+    place-items: center;
+    min-width: 320px;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+}
+
+#root {
+  width: 100%;
+}
