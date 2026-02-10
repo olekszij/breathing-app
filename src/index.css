@@ -45,14 +45,18 @@
 
 @layer base {
   :root {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
-    --card: 224 71% 4%;
-    --primary: 199 89% 48%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 160 84% 39%;
-    --muted: 223 47% 11%;
-    --accent: 262 83% 58%;
+    --background: 210 20% 98%;
+    --foreground: 220 20% 20%;
+    --card: 0 0% 100%;
+    --primary: 200 70% 85%;
+    --primary-foreground: 220 20% 20%;
+    --secondary: 150 60% 80%;
+    --muted: 210 20% 95%;
+    --accent: 40 80% 85%;
+
+    --color-inhale: hsl(150 60% 75%);
+    --color-hold: hsl(40 80% 80%);
+    --color-exhale: hsl(200 70% 80%);
   }
 
   body {
