@@ -48,15 +48,36 @@
     --background: 210 20% 98%;
     --foreground: 220 20% 20%;
     --card: 0 0% 100%;
-    --primary: 200 70% 85%;
+    --primary: 210 100% 70%;
     --primary-foreground: 220 20% 20%;
-    --secondary: 150 60% 80%;
+    --secondary: 150 60% 60%;
     --muted: 210 20% 95%;
-    --accent: 40 80% 85%;
+    --accent: 40 100% 70%;
 
-    --color-inhale: hsl(150 60% 75%);
-    --color-hold: hsl(40 80% 80%);
-    --color-exhale: hsl(200 70% 80%);
+    --color-inhale: hsl(150 80% 30%);
+    --color-hold: hsl(40 90% 35%);
+    --color-exhale: hsl(200 90% 35%);
+
+    --session-bg: 0 0% 0% / 0.1;
+    --session-text: 220 20% 20% / 0.7;
+  }
+
+  .dark {
+    --background: 220 20% 4%;
+    --foreground: 220 10% 98%;
+    --card: 220 20% 8%;
+    --primary: 210 100% 70%;
+    --primary-foreground: 220 20% 10%;
+    --secondary: 210 100% 60%;
+    --muted: 220 20% 15%;
+    --accent: 40 100% 70%;
+
+    --color-inhale: hsl(150 80% 60%);
+    --color-hold: hsl(40 90% 65%);
+    --color-exhale: hsl(200 90% 65%);
+
+    --session-bg: 0 0% 100% / 0.05;
+    --session-text: 0 0% 100% / 0.4;
   }
 
   body {
@@ -73,4 +94,35 @@
 
 #root {
   width: 100%;
+}
+
+@layer utilities {
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, currentColor 1px, transparent 1px),
+      linear-gradient(to bottom, currentColor 1px, transparent 1px);
+    background-size: 40px 40px;
+    color: hsla(var(--foreground) / 0.03);
+  }
+
+  .dark.bg-grid {
+    color: hsla(var(--foreground) / 0.02);
+  }
+
+  .bg-session {
+    background-color: hsla(var(--session-bg));
+  }
+
+  .text-session {
+    color: hsla(var(--session-text));
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
