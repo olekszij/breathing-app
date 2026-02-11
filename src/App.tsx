@@ -49,8 +49,7 @@ function App() {
   const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0)
   const [showCelebration, setShowCelebration] = useState(false)
   const [showLandscapeHint, setShowLandscapeHint] = useState(true)
-  const [isDarkMode, setIsDarkMode] = useState(true)
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isDarkMode] = useState(true)
 
   useEffect(() => {
     if (isDarkMode) {
@@ -86,6 +85,24 @@ function App() {
   const [sessionTime, setSessionTime] = useState(120) // 2 minutes in seconds
   const saccadeTimerRef = useRef<number>(0)
   const saccadePosRef = useRef({ x: 50, y: 50 })
+  const containerSizeRef = useRef({ width: 0, height: 0 })
+  const speedRef = useRef(speed)
+
+  useEffect(() => {
+    speedRef.current = speed
+  }, [speed])
+
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect()
+        containerSizeRef.current = { width: rect.width, height: rect.height }
+      }
+    }
+    updateSize()
+    window.addEventListener('resize', updateSize)
+    return () => window.removeEventListener('resize', updateSize)
+  }, [activeView]) // Re-run when view changes as container might change size or exist/not exist
 
   useEffect(() => {
     // Detect iOS
@@ -136,6 +153,8 @@ function App() {
   }
 
   useEffect(() => {
+    if (!isActive) return
+
     let frameId: number
 
     const tick = (now: number) => {
@@ -145,96 +164,93 @@ function App() {
       const delta = now - lastTimeRef.current
       lastTimeRef.current = now
 
-      if (isActive) {
-        elapsedRef.current = (elapsedRef.current + delta * speed)
+      elapsedRef.current = (elapsedRef.current + delta * speedRef.current)
 
-        if (activeView === 'BREATHING') {
-          const duration = 16000
-          const time = elapsedRef.current % duration
+      if (activeView === 'BREATHING') {
+        const duration = 16000
+        const time = elapsedRef.current % duration
 
-          if (dotRef.current && containerRef.current) {
-            const phaseIdx = Math.floor(time / 4000)
-            const phaseElapsed = time % 4000
-            const progress = phaseElapsed / 4000
+        if (dotRef.current && containerRef.current) {
+          const phaseIdx = Math.floor(time / 4000)
+          const phaseElapsed = time % 4000
+          const progress = phaseElapsed / 4000
 
-            if (phaseIdx !== currentPhaseIndex) setCurrentPhaseIndex(phaseIdx)
-
-            const rect = containerRef.current.getBoundingClientRect()
-            const side = rect.width
-            const r = 32
-            const p = (r / side) * 100
-
-            let sx = 0, sy = 0
-            if (phaseIdx === 0) { sx = progress * 100; sy = 0 }
-            else if (phaseIdx === 1) { sx = 100; sy = progress * 100 }
-            else if (phaseIdx === 2) { sx = (1 - progress) * 100; sy = 100 }
-            else { sx = 0; sy = (1 - progress) * 100 }
-
-            let x = sx, y = sy
-            if (sx < p && sy < p) {
-              const dx = p - sx, dy = p - sy
-              const d = Math.sqrt(dx * dx + dy * dy)
-              if (d > 0) { x = p - (dx / d) * p; y = p - (dy / d) * p }
-            } else if (sx > 100 - p && sy < p) {
-              const dx = sx - (100 - p), dy = p - sy
-              const d = Math.sqrt(dx * dx + dy * dy)
-              if (d > 0) { x = (100 - p) + (dx / d) * p; y = p - (dy / d) * p }
-            } else if (sx > 100 - p && sy > 100 - p) {
-              const dx = sx - (100 - p), dy = sy - (100 - p)
-              const d = Math.sqrt(dx * dx + dy * dy)
-              if (d > 0) { x = (100 - p) + (dx / d) * p; y = (100 - p) + (dy / d) * p }
-            } else if (sx < p && sy > 100 - p) {
-              const dx = p - sx, dy = sy - (100 - p)
-              const d = Math.sqrt(dx * dx + dy * dy)
-              if (d > 0) { x = p - (dx / d) * p; y = (100 - p) + (dy / d) * p }
-            }
-
-            dotRef.current.style.left = `${x}%`
-            dotRef.current.style.top = `${y}%`
-            dotRef.current.style.transform = 'translate3d(-50%, -50%, 0)'
+          if (phaseIdx !== currentPhaseIndex) {
+            setCurrentPhaseIndex(phaseIdx)
           }
-        } else if (activeView === 'EYE_GYM') {
-          // Timer is handled by separate useEffect for efficiency
-          if (dotRef.current) {
-            const t = elapsedRef.current / 1000
 
-            if (eyeGymMode === 'ACCOMMODATION') {
-              const scale = 0.5 + Math.abs(Math.sin(t * 0.5)) * 2
-              dotRef.current.style.left = '50%'
-              dotRef.current.style.top = '50%'
-              dotRef.current.style.transform = `translate3d(-50%, -50%, 0) scale(${scale})`
-            } else if (eyeGymMode === 'PURSUIT') {
-              // Lemniscate of Bernoulli (Infinity Path)
-              const scale = 40
-              const denom = 1 + Math.pow(Math.sin(t), 2)
-              const x = (scale * Math.cos(t)) / denom
-              const y = (scale * Math.sin(t) * Math.cos(t)) / denom
-              dotRef.current.style.left = `${50 + x}%`
-              dotRef.current.style.top = `${50 + y}%`
-              dotRef.current.style.transform = 'translate3d(-50%, -50%, 0) scale(1)'
-            } else if (eyeGymMode === 'SACCADES') {
-              saccadeTimerRef.current += delta
-              if (saccadeTimerRef.current > 1000 / speed) {
-                saccadeTimerRef.current = 0
-                saccadePosRef.current = {
-                  x: 10 + Math.random() * 80,
-                  y: 10 + Math.random() * 80
-                }
-              }
-              dotRef.current.style.left = `${saccadePosRef.current.x}%`
-              dotRef.current.style.top = `${saccadePosRef.current.y}%`
-              dotRef.current.style.transform = 'translate3d(-50%, -50%, 0) scale(1)'
-            } else if (eyeGymMode === 'CONVERGENCE') {
-              const dist = Math.abs(Math.sin(t * 0.5)) * 40
-              dotRef.current.style.left = `${50 - dist}%`
-              dotRef.current.style.top = '50%'
-              dotRef.current.style.transform = 'translate3d(-50%, -50%, 0) scale(1)'
+          const side = containerSizeRef.current.width || 300
+          const r = 32
+          const p = (r / side) * 100
 
-              if (secondDotRef.current) {
-                secondDotRef.current.style.left = `${50 + dist}%`
-                secondDotRef.current.style.top = '50%'
-                secondDotRef.current.style.transform = 'translate3d(-50%, -50%, 0) scale(1)'
+          let sx = 0, sy = 0
+          if (phaseIdx === 0) { sx = progress * 100; sy = 0 }
+          else if (phaseIdx === 1) { sx = 100; sy = progress * 100 }
+          else if (phaseIdx === 2) { sx = (1 - progress) * 100; sy = 100 }
+          else { sx = 0; sy = (1 - progress) * 100 }
+
+          let x = sx, y = sy
+          if (sx < p && sy < p) {
+            const dx = p - sx, dy = p - sy
+            const d = Math.sqrt(dx * dx + dy * dy)
+            if (d > 0) { x = p - (dx / d) * p; y = p - (dy / d) * p }
+          } else if (sx > 100 - p && sy < p) {
+            const dx = sx - (100 - p), dy = p - sy
+            const d = Math.sqrt(dx * dx + dy * dy)
+            if (d > 0) { x = (100 - p) + (dx / d) * p; y = p - (dy / d) * p }
+          } else if (sx > 100 - p && sy > 100 - p) {
+            const dx = sx - (100 - p), dy = sy - (100 - p)
+            const d = Math.sqrt(dx * dx + dy * dy)
+            if (d > 0) { x = (100 - p) + (dx / d) * p; y = (100 - p) + (dy / d) * p }
+          } else if (sx < p && sy > 100 - p) {
+            const dx = p - sx, dy = sy - (100 - p)
+            const d = Math.sqrt(dx * dx + dy * dy)
+            if (d > 0) { x = p - (dx / d) * p; y = (100 - p) + (dy / d) * p }
+          }
+
+          dotRef.current.style.left = `${x}%`
+          dotRef.current.style.top = `${y}%`
+          dotRef.current.style.transform = 'translate3d(-50%, -50%, 0)'
+        }
+      } else if (activeView === 'EYE_GYM') {
+        if (dotRef.current) {
+          const t = elapsedRef.current / 1000
+
+          if (eyeGymMode === 'ACCOMMODATION') {
+            const scale = 0.5 + Math.abs(Math.sin(t * 0.5)) * 2
+            dotRef.current.style.left = '50%'
+            dotRef.current.style.top = '50%'
+            dotRef.current.style.transform = `translate3d(-50%, -50%, 0) scale(${scale})`
+          } else if (eyeGymMode === 'PURSUIT') {
+            const scale = 40
+            const denom = 1 + Math.pow(Math.sin(t), 2)
+            const x = (scale * Math.cos(t)) / denom
+            const y = (scale * Math.sin(t) * Math.cos(t)) / denom
+            dotRef.current.style.left = `${50 + x}%`
+            dotRef.current.style.top = `${50 + y}%`
+            dotRef.current.style.transform = 'translate3d(-50%, -50%, 0) scale(1)'
+          } else if (eyeGymMode === 'SACCADES') {
+            saccadeTimerRef.current += delta
+            if (saccadeTimerRef.current > 1000 / speedRef.current) {
+              saccadeTimerRef.current = 0
+              saccadePosRef.current = {
+                x: 10 + Math.random() * 80,
+                y: 10 + Math.random() * 80
               }
+            }
+            dotRef.current.style.left = `${saccadePosRef.current.x}%`
+            dotRef.current.style.top = `${saccadePosRef.current.y}%`
+            dotRef.current.style.transform = 'translate3d(-50%, -50%, 0) scale(1)'
+          } else if (eyeGymMode === 'CONVERGENCE') {
+            const dist = Math.abs(Math.sin(t * 0.5)) * 40
+            dotRef.current.style.left = `${50 - dist}%`
+            dotRef.current.style.top = '50%'
+            dotRef.current.style.transform = 'translate3d(-50%, -50%, 0) scale(1)'
+
+            if (secondDotRef.current) {
+              secondDotRef.current.style.left = `${50 + dist}%`
+              secondDotRef.current.style.top = '50%'
+              secondDotRef.current.style.transform = 'translate3d(-50%, -50%, 0) scale(1)'
             }
           }
         }
@@ -244,7 +260,7 @@ function App() {
 
     frameId = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frameId)
-  }, [isActive, currentPhaseIndex])
+  }, [isActive, activeView, eyeGymMode])
 
   const toggleActive = () => {
     if (!isActive) lastTimeRef.current = performance.now()
@@ -284,7 +300,7 @@ function App() {
   const currentPhase = PHASES[currentPhaseIndex] || PHASES[0]
 
   return (
-    <div className={`min-h-screen w-full flex flex-col items-center justify-center p-4 relative bg-background text-foreground transition-colors duration-500 overflow-hidden ${isDarkMode ? 'dark' : ''} ${showGrid ? 'bg-grid' : ''}`}>
+    <div className={`min-h-screen w-full flex flex-col items-center justify-center p-4 relative bg-background text-foreground transition-colors duration-500 ${isDarkMode ? 'dark' : ''} ${showGrid ? 'bg-grid' : ''}`}>
       {/* Background Ambient Glow */}
       <div
         className="absolute inset-0 opacity-20 transition-colors duration-1000 blur-[150px]"
@@ -312,100 +328,43 @@ function App() {
         </div>
       )}
 
-      {/* Global Hamburger Button */}
+      {/* Global Header Bar */}
       {!isActive && (
-        <button
-          onClick={() => setIsMenuOpen(true)}
-          className="fixed top-6 right-6 z-[60] p-4 rounded-2xl bg-session border border-foreground/10 text-foreground active:scale-95 transition-all shadow-xl"
-        >
-          <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" /></svg>
-        </button>
-      )}
+        <div className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-between p-6 bg-gradient-to-b from-background to-transparent pointer-events-none">
+          {/* Logo / Home Button */}
+          <button
+            onClick={() => { setActiveView('MENU'); setIsActive(false); }}
+            className="pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-session border border-foreground/10 hover:bg-foreground/5 active:scale-95 transition-all"
+          >
+            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-foreground/80">Protocols</span>
+          </button>
 
-      {/* Global Menu Overlay */}
-      {isMenuOpen && (
-        <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-2xl animate-in fade-in duration-300">
-          <div className="flex flex-col h-full p-10 max-w-2xl mx-auto w-full">
-            <div className="flex justify-between items-center mb-16">
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground/30">Menu</span>
-              <button
-                onClick={() => setIsMenuOpen(false)}
-                className="p-4 rounded-2xl bg-foreground/5 text-foreground"
-              >
-                <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" /></svg>
-              </button>
-            </div>
-
-            <nav className="flex flex-col gap-8">
-              <button
-                onClick={() => { setActiveView('MENU'); setIsActive(false); setIsMenuOpen(false); }}
-                className="text-4xl font-black uppercase tracking-tighter text-left"
-              >
-                Protocols
-              </button>
-
-              {activeView === 'EYE_GYM' && (
-                <div className="space-y-4 mt-4 animate-in slide-in-from-left duration-500">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/20">Eye Gym Modes</span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {(['ACCOMMODATION', 'PURSUIT', 'SACCADES', 'CONVERGENCE'] as const).map(mode => (
-                      <button
-                        key={mode}
-                        onClick={() => { setEyeGymMode(mode); reset(); setIsMenuOpen(false); }}
-                        className={`px-6 py-6 rounded-[1.5rem] text-xl font-black tracking-tight transition-all text-left border uppercase ${eyeGymMode === mode
-                          ? 'bg-foreground text-background shadow-lg border-foreground'
-                          : 'bg-foreground/5 text-foreground/40 border-foreground/5'
-                          }`}
-                      >
-                        {EYE_GYM_MODES[mode].title}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="h-px bg-foreground/5 w-full my-4" />
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <span className="text-xl font-bold text-foreground/40">Theme</span>
-                  <button
-                    onClick={() => setIsDarkMode(!isDarkMode)}
-                    className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-foreground text-background font-black uppercase tracking-widest text-xs"
-                  >
-                    {isDarkMode ? 'Dark' : 'Light'}
-                  </button>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xl font-bold text-foreground/40">Grid Overlay</span>
-                  <button
-                    onClick={() => setShowGrid(!showGrid)}
-                    className={`px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${showGrid ? 'bg-foreground text-background' : 'bg-foreground/5 text-foreground'}`}
-                  >
-                    {showGrid ? 'On' : 'Off'}
-                  </button>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xl font-bold text-foreground/40">Fullscreen</span>
-                  <button
-                    onClick={() => { toggleFullscreen(); setIsMenuOpen(false); }}
-                    className="px-6 py-3 rounded-2xl bg-foreground/5 text-foreground font-black uppercase tracking-widest text-xs"
-                  >
-                    Toggle
-                  </button>
-                </div>
-              </div>
-            </nav>
-
-            <div className="mt-auto pt-10 text-center">
-              <p className="text-[8px] font-black uppercase tracking-[0.4em] text-foreground/20">Version 1.2.0 • Premium Edition</p>
-            </div>
+          {/* Settings Group */}
+          <div className="flex items-center gap-2 pointer-events-auto">
+            <button
+              onClick={() => setShowGrid(!showGrid)}
+              className={`p-3 rounded-xl bg-session border border-foreground/10 transition-all active:scale-95 ${showGrid ? 'text-primary' : 'text-foreground/40'}`}
+              title="Toggle Grid"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM8 20H4v-4h4v4zm0-6H4v-4h4v4zm0-6H4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4z" /></svg>
+            </button>
+            <button
+              onClick={toggleFullscreen}
+              className="p-3 rounded-xl bg-session border border-foreground/10 text-foreground/40 active:scale-95 transition-all"
+              title="Toggle Fullscreen"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" /></svg>
+            </button>
           </div>
         </div>
       )}
 
+      {/* Global Menu Removed */}
+
       <div className={`z-10 flex flex-col items-center gap-10 w-full transition-all duration-700 ${isActive && activeView === 'EYE_GYM' ? 'max-w-none h-full' : 'max-w-7xl'}`}>
         {activeView === 'MENU' && (
-          <div className="flex flex-col items-center gap-6 sm:gap-8 w-full max-w-2xl animate-in fade-in zoom-in duration-700 pt-20 sm:pt-0">
+          <div className="flex flex-col items-center gap-4 sm:gap-8 w-full max-w-2xl animate-in fade-in zoom-in duration-700 pt-16 sm:pt-0">
             <header className="text-center space-y-1 sm:space-y-2 px-4">
               <h1 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tight uppercase text-foreground/90 leading-none">
                 Protocols
@@ -415,10 +374,10 @@ function App() {
               </p>
             </header>
 
-            <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4 sm:gap-4 w-full px-6 sm:px-4 max-w-lg sm:max-w-none">
+            <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-4 w-full px-6 sm:px-4 max-w-lg sm:max-w-none">
               <button
                 onClick={() => { setActiveView('BREATHING'); setSpeed(1); reset(); }}
-                className="group relative flex items-center gap-6 sm:flex-col sm:items-start p-6 sm:p-6 rounded-[2rem] bg-foreground/[0.02] border border-foreground/10 hover:border-foreground/20 transition-all active:scale-[0.98] text-left overflow-hidden w-full"
+                className="group relative flex items-center gap-4 sm:flex-col sm:items-start p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] bg-foreground/[0.02] border border-foreground/10 hover:border-foreground/20 transition-all active:scale-[0.98] text-left overflow-hidden w-full"
               >
                 <div className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 bg-primary/10 rounded-2xl flex items-center justify-center sm:absolute sm:top-6 sm:right-6 sm:bg-transparent">
                   <div className="w-8 h-8 sm:w-12 sm:h-12 border-2 sm:border-4 border-primary rounded-lg rotate-12 opacity-40 sm:opacity-5 group-hover:opacity-20" />
@@ -432,7 +391,7 @@ function App() {
 
               <button
                 onClick={() => { setActiveView('EYE_GYM'); setSpeed(1); reset(); }}
-                className="group relative flex items-center gap-6 sm:flex-col sm:items-start p-6 sm:p-6 rounded-[2rem] bg-foreground/[0.02] border border-foreground/10 hover:border-foreground/20 transition-all active:scale-[0.98] text-left overflow-hidden w-full"
+                className="group relative flex items-center gap-4 sm:flex-col sm:items-start p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] bg-foreground/[0.02] border border-foreground/10 hover:border-foreground/20 transition-all active:scale-[0.98] text-left overflow-hidden w-full"
               >
                 <div className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 bg-secondary/10 rounded-2xl flex items-center justify-center sm:absolute sm:top-6 sm:right-6 sm:bg-transparent">
                   <div className="w-8 h-8 sm:w-12 sm:h-12 border-2 sm:border-4 border-secondary rounded-full opacity-40 sm:opacity-5 group-hover:opacity-20" />
@@ -453,28 +412,7 @@ function App() {
                 >
                   Install App
                 </button>
-                <button
-                  onClick={() => setIsDarkMode(!isDarkMode)}
-                  className="p-3 rounded-xl bg-session border border-foreground/10 text-session hover:bg-foreground/10 active:scale-95 transition-all flex items-center justify-center min-w-[44px]"
-                  title="Toggle Theme"
-                >
-                  <div className="w-5 h-5 flex items-center justify-center">
-                    {isDarkMode ? (
-                      <svg viewBox="0 0 24 24" className="w-full h-full fill-current"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z" /></svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" className="w-full h-full fill-current"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zM7.05 18.01c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06z" /></svg>
-                    )}
-                  </div>
-                </button>
               </div>
-            )}
-            {!(deferredPrompt || isIOS) && (
-              <button
-                onClick={() => setIsDarkMode(!isDarkMode)}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-session border border-foreground/10 text-session hover:bg-foreground/10 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest"
-              >
-                {isDarkMode ? 'Dark Mode' : 'Light Mode'}
-              </button>
             )}
           </div>
         )}
@@ -525,9 +463,9 @@ function App() {
         )}
 
         {activeView === 'EYE_GYM' && (
-          <div className={`flex flex-col items-center gap-4 w-full animate-in fade-in duration-700 ${isActive ? 'h-screen justify-center' : 'pt-20 sm:pt-0'}`}>
+          <div className={`flex flex-col items-center gap-2 w-full animate-in fade-in duration-700 ${isActive ? 'h-screen justify-center' : 'pt-16 sm:pt-0'}`}>
             {!isActive && (
-              <div className="flex flex-col items-center gap-8 w-full max-w-xl px-6 animate-in fade-in duration-700">
+              <div className="flex flex-col items-center gap-4 sm:gap-8 w-full max-w-xl px-6 animate-in fade-in duration-700">
                 <header className="flex flex-col items-center gap-2 text-center">
                   <h1 className="text-4xl sm:text-6xl font-black tracking-tighter text-foreground/90 leading-none uppercase px-4">
                     Eye Gymnastics
@@ -539,36 +477,41 @@ function App() {
 
                 <div className="w-full space-y-4">
                   <div className="flex items-center gap-4 px-2">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/20">Eye Gym Modes</span>
+                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground/40">Eye Gym Modes</span>
                     <div className="h-px bg-foreground/5 flex-1" />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 sm:gap-4 w-full">
+                  <div className="flex justify-center gap-4 w-full">
                     {(['ACCOMMODATION', 'PURSUIT', 'SACCADES', 'CONVERGENCE'] as const).map(mode => (
                       <button
                         key={mode}
                         onClick={() => { setEyeGymMode(mode); reset(); }}
-                        className={`px-2 py-8 sm:px-8 sm:py-10 rounded-[2rem] sm:rounded-[2.5rem] text-[10px] sm:text-base font-black tracking-widest transition-all text-center uppercase border-4 ${eyeGymMode === mode
-                          ? 'bg-foreground text-background border-foreground shadow-[0_20px_50px_rgba(0,0,0,0.3)] scale-[1.02]'
+                        className={`w-14 h-14 sm:w-20 sm:h-20 rounded-[1.25rem] sm:rounded-[2rem] flex items-center justify-center transition-all border-4 ${eyeGymMode === mode
+                          ? 'bg-foreground text-background border-foreground shadow-[0_15px_30px_rgba(0,0,0,0.3)] scale-[1.15] z-10'
                           : 'bg-foreground/[0.03] text-foreground/20 border-transparent hover:bg-foreground/[0.05] hover:text-foreground/40'
                           }`}
+                        title={EYE_GYM_MODES[mode].title}
                       >
-                        {EYE_GYM_MODES[mode].title}
+                        <div className="w-8 h-8 sm:w-12 sm:h-12 p-1">{EYE_GYM_MODES[mode].icon}</div>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="p-6 rounded-[2rem] bg-foreground/[0.02] border border-foreground/5 w-full">
-                  <p className="text-foreground/40 text-xs font-medium leading-relaxed text-center italic">
+                <div className="p-4 rounded-2xl bg-foreground/[0.02] border border-foreground/5 w-full space-y-2">
+                  <div className="text-center">
+                    <span className="text-xs font-black uppercase tracking-widest text-foreground/80">{EYE_GYM_MODES[eyeGymMode].title}</span>
+                    <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-foreground/30">{EYE_GYM_MODES[eyeGymMode].subtitle}</p>
+                  </div>
+                  <p className="text-foreground/40 text-[10px] sm:text-xs font-medium leading-relaxed text-center italic">
                     {EYE_GYM_MODES[eyeGymMode].desc}
                   </p>
                 </div>
               </div>
             )}
 
-            <div ref={containerRef} className={`relative transition-all duration-700 ease-out ${isActive ? 'w-screen h-screen' : 'w-[85vw] h-[35vh] max-w-7xl'}`}>
-              <div className={`absolute inset-0 border-2 border-foreground/5 bg-foreground/[0.01] transition-all duration-700 ${isActive ? 'rounded-none border-transparent' : 'rounded-[3rem]'}`} />
+            <div ref={containerRef} className={`relative transition-all duration-700 ease-out ${isActive ? 'w-screen h-screen' : 'w-[85vw] h-[25vh] max-w-7xl'}`}>
+              <div className={`absolute inset-0 border-2 border-foreground/5 bg-foreground/[0.01] transition-all duration-700 ${isActive ? 'rounded-none border-transparent' : 'rounded-3xl'}`} />
               {!isActive && (
                 <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-[0.02] select-none pointer-events-none overflow-hidden scale-110">
                   <div className="w-64 h-64 border-[40px] border-foreground rounded-full opacity-10" />
