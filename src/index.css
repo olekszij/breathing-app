@@ -10,9 +10,9 @@
   --color-muted: hsl(var(--muted));
   --color-accent: hsl(var(--accent));
 
-  --color-inhale: hsl(140 100% 50%);
-  --color-hold: hsl(45 100% 50%);
-  --color-exhale: hsl(190 100% 50%);
+  --color-inhale: hsl(160 100% 45%);
+  --color-hold: #FFC107;
+  --color-exhale: hsl(195 100% 50%);
 
   --animate-breath-in: breath-in 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   --animate-breath-hold: breath-hold 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
@@ -54,30 +54,12 @@
     --muted: 210 20% 95%;
     --accent: 40 100% 70%;
 
-    --color-inhale: hsl(150 80% 30%);
-    --color-hold: hsl(40 90% 35%);
-    --color-exhale: hsl(200 90% 35%);
+    --color-inhale: hsl(160 100% 45%);
+    --color-hold: #FFC107;
+    --color-exhale: hsl(195 100% 50%);
 
     --session-bg: 0 0% 0% / 0.1;
     --session-text: 220 20% 20% / 0.7;
-  }
-
-  .dark {
-    --background: 220 20% 4%;
-    --foreground: 220 10% 98%;
-    --card: 220 20% 8%;
-    --primary: 210 100% 70%;
-    --primary-foreground: 220 20% 10%;
-    --secondary: 210 100% 60%;
-    --muted: 220 20% 15%;
-    --accent: 40 100% 70%;
-
-    --color-inhale: hsl(150 80% 60%);
-    --color-hold: hsl(40 90% 65%);
-    --color-exhale: hsl(200 90% 65%);
-
-    --session-bg: 0 0% 100% / 0.05;
-    --session-text: 0 0% 100% / 0.4;
   }
 
   body {
@@ -100,10 +82,6 @@
       linear-gradient(to bottom, currentColor 1px, transparent 1px);
     background-size: 40px 40px;
     color: hsla(var(--foreground) / 0.03);
-  }
-
-  .dark.bg-grid {
-    color: hsla(var(--foreground) / 0.02);
   }
 
   .bg-session {

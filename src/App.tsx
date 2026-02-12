@@ -1,44 +1,90 @@
 import { useState, useEffect, useRef } from 'react'
 
 const PHASES = [
-  { nameEn: 'Inhale', color: 'text-inhale', bg: 'bg-inhale', glow: 'rgba(100, 255, 180, 0.4)' },
-  { nameEn: 'Hold (Full)', color: 'text-hold', bg: 'bg-hold', glow: 'rgba(255, 220, 150, 0.4)' },
-  { nameEn: 'Exhale', color: 'text-exhale', bg: 'bg-exhale', glow: 'rgba(150, 220, 255, 0.4)' },
-  { nameEn: 'Hold (Empty)', color: 'text-hold', bg: 'bg-hold', glow: 'rgba(255, 220, 150, 0.4)' },
+  {
+    nameEn: 'Inhale',
+    color: 'text-inhale',
+    bg: 'bg-inhale',
+    full: 'var(--color-inhale)',
+    icon: <svg viewBox="0 0 24 24" className="w-12 h-12 md:w-16 md:h-16 mb-2 fill-current"><path d="M12 4l-8 8h5v8h6v-8h5z" /></svg>
+  },
+  {
+    nameEn: 'Hold (Full)',
+    color: 'text-hold',
+    bg: 'bg-hold',
+    full: 'var(--color-hold)',
+    icon: <svg viewBox="0 0 24 24" className="w-10 h-10 md:w-14 md:h-14 mb-2 fill-current"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+  },
+  {
+    nameEn: 'Exhale',
+    color: 'text-exhale',
+    bg: 'bg-exhale',
+    full: 'var(--color-exhale)',
+    icon: <svg viewBox="0 0 24 24" className="w-12 h-12 md:w-16 md:h-16 mb-2 fill-current"><path d="M12 20l8-8h-5V4h-6v8H4z" /></svg>
+  },
+  {
+    nameEn: 'Hold (Empty)',
+    color: 'text-hold',
+    bg: 'bg-hold',
+    full: 'var(--color-hold)',
+    icon: <svg viewBox="0 0 24 24" className="w-10 h-10 md:w-14 md:h-14 mb-2 fill-current"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+  },
 ]
 
 type AppView = 'MENU' | 'BREATHING' | 'EYE_GYM'
 
-const EYE_GYM_MODES = {
-  ACCOMMODATION: {
+const EXERCISES = [
+  {
+    id: 'BREATHING',
+    type: 'BREATHING' as const,
+    title: 'Square Breath',
+    subtitle: 'CO2 Tolerance',
+    desc: 'Square breathing technique to regulate nervous system and build CO2 tolerance.',
+    icon: <div className="w-8 h-8 sm:w-12 sm:h-12 border-2 sm:border-4 border-primary rounded-lg rotate-12 opacity-80" />,
+    color: 'text-primary',
+    bg: 'bg-primary/10'
+  },
+  {
+    id: 'ACCOMMODATION',
+    type: 'EYE_GYM' as const,
     title: 'Accommodation',
     subtitle: 'Dynamic Focus',
-    desc: 'Focus on the dot as it changes size. This forces your ciliary muscles to contract and relax, preventing computer vision syndrome.',
-    benefit: 'Strengthens the lens-focusing mechanism and reduces near-point strain.',
-    icon: <svg viewBox="0 0 24 24" className="w-full h-full fill-current"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" /></svg>
+    desc: 'Focus on the dot as it changes size to train lens muscles and reduce strain.',
+    icon: <svg viewBox="0 0 24 24" className="w-full h-full fill-current"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" /></svg>,
+    color: 'text-emerald-400',
+    bg: 'bg-emerald-400/10'
   },
-  PURSUIT: {
+  {
+    id: 'PURSUIT',
+    type: 'EYE_GYM' as const,
     title: 'Smoothing',
     subtitle: 'Infinity Tracking',
-    desc: 'Follow the dot as it traces a precise Lemniscate of Bernoulli (Infinity path). Keep your head still and follow only with your eyes.',
-    benefit: 'Improves coordination of all six extraocular muscles.',
-    icon: <svg viewBox="0 0 24 24" className="w-full h-full fill-current"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z" /></svg>
+    desc: 'Follow the dot as it traces an infinity path to improve muscle coordination.',
+    icon: <svg viewBox="0 0 24 24" className="w-full h-full fill-current"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z" /></svg>,
+    color: 'text-blue-400',
+    bg: 'bg-blue-400/10'
   },
-  SACCADES: {
+  {
+    id: 'SACCADES',
+    type: 'EYE_GYM' as const,
     title: 'Saccades',
-    subtitle: 'Rapid Jump Training',
-    desc: 'Follow the dot as it instantly jumps between random positions. This trains the brain to acquisition targets faster.',
-    benefit: 'Increases reading speed and visual reaction time.',
-    icon: <svg viewBox="0 0 24 24" className="w-full h-full fill-current"><path d="M7 2v10h3l-4 4-4-4h3V2h2zm14 10h-3V2h-2v10h-3l4 4 4-4z" /></svg>
+    subtitle: 'Rapid Jump',
+    desc: 'Follow the dot as it jumps between random positions to increase acquisition speed.',
+    icon: <svg viewBox="0 0 24 24" className="w-full h-full fill-current"><path d="M7 2v10h3l-4 4-4-4h3V2h2zm14 10h-3V2h-2v10h-3l4 4 4-4z" /></svg>,
+    color: 'text-amber-400',
+    bg: 'bg-amber-400/10'
   },
-  CONVERGENCE: {
+  {
+    id: 'CONVERGENCE',
+    type: 'EYE_GYM' as const,
     title: 'Bilateral',
     subtitle: 'Vergence Training',
-    desc: 'Two dots move toward and away from each other. Focus as they merge and separate to train binocular vision.',
-    benefit: 'Corrects double vision and improves 3D depth perception.',
-    icon: <svg viewBox="0 0 24 24" className="w-full h-full fill-current"><path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3L5 6.99h3V14h2V6.99h3L9 3z" /></svg>
+    desc: 'Focus as two dots merge and separate to train binocular vision and depth.',
+    icon: <svg viewBox="0 0 24 24" className="w-full h-full fill-current"><path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3L5 6.99h3V14h2V6.99h3L9 3z" /></svg>,
+    color: 'text-indigo-400',
+    bg: 'bg-indigo-400/10'
   }
-}
+]
 
 function App() {
   const [activeView, setActiveView] = useState<AppView>('MENU')
@@ -47,17 +93,14 @@ function App() {
   const [isIOS, setIsIOS] = useState(false)
   const [showIOSInstructions, setShowIOSInstructions] = useState(false)
   const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0)
+  const currentPhaseIndexRef = useRef(0)
   const [showCelebration, setShowCelebration] = useState(false)
   const [showLandscapeHint, setShowLandscapeHint] = useState(true)
-  const [isDarkMode] = useState(true)
+  const [showGrid, setShowGrid] = useState(() => localStorage.getItem('showGrid') === 'true')
 
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-  }, [isDarkMode])
+    localStorage.setItem('showGrid', showGrid.toString())
+  }, [showGrid])
 
   // Cleanup lingered Service Workers from other projects on the same port
   useEffect(() => {
@@ -71,7 +114,6 @@ function App() {
   }, [])
 
   // Settings
-  const [showGrid, setShowGrid] = useState(false)
   const [speed, setSpeed] = useState(1)
 
   const lastTimeRef = useRef<number>(0)
@@ -81,28 +123,33 @@ function App() {
   const secondDotRef = useRef<HTMLDivElement>(null)
   // Eye Gym Settings
   const [eyeGymMode, setEyeGymMode] = useState<'ACCOMMODATION' | 'PURSUIT' | 'SACCADES' | 'CONVERGENCE'>('ACCOMMODATION')
-  const [eyeGymTheme, _setEyeGymTheme] = useState<'BLUE' | 'GREEN' | 'AMBER'>('GREEN')
-  const [sessionTime, setSessionTime] = useState(120) // 2 minutes in seconds
-  const saccadeTimerRef = useRef<number>(0)
-  const saccadePosRef = useRef({ x: 50, y: 50 })
   const containerSizeRef = useRef({ width: 0, height: 0 })
   const speedRef = useRef(speed)
+  const saccadeTimerRef = useRef(0)
+  const saccadePosRef = useRef({ x: 0, y: 0 })
 
   useEffect(() => {
     speedRef.current = speed
   }, [speed])
 
   useEffect(() => {
-    const updateSize = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect()
-        containerSizeRef.current = { width: rect.width, height: rect.height }
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === containerRef.current) {
+          const { width, height } = entry.contentRect
+          containerSizeRef.current = { width, height }
+        }
       }
+    })
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current)
     }
-    updateSize()
-    window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
-  }, [activeView]) // Re-run when view changes as container might change size or exist/not exist
+
+    return () => observer.disconnect()
+  }, [activeView])
+
+  const [sessionTime, setSessionTime] = useState(120) // 2 minutes in seconds
 
   useEffect(() => {
     // Detect iOS
@@ -175,82 +222,74 @@ function App() {
           const phaseElapsed = time % 4000
           const progress = phaseElapsed / 4000
 
-          if (phaseIdx !== currentPhaseIndex) {
+          if (phaseIdx !== currentPhaseIndexRef.current) {
+            currentPhaseIndexRef.current = phaseIdx
             setCurrentPhaseIndex(phaseIdx)
           }
 
           const side = containerSizeRef.current.width || 300
-          const r = 32
-          const p = (r / side) * 100
+          const r = 32 // radius of the corner curve in pixels
 
-          let sx = 0, sy = 0
-          if (phaseIdx === 0) { sx = progress * 100; sy = 0 }
-          else if (phaseIdx === 1) { sx = 100; sy = progress * 100 }
-          else if (phaseIdx === 2) { sx = (1 - progress) * 100; sy = 100 }
-          else { sx = 0; sy = (1 - progress) * 100 }
+          let targetX = 0, targetY = 0
+          if (phaseIdx === 0) { targetX = progress * side; targetY = 0 }
+          else if (phaseIdx === 1) { targetX = side; targetY = progress * side }
+          else if (phaseIdx === 2) { targetX = (1 - progress) * side; targetY = side }
+          else { targetX = 0; targetY = (1 - progress) * side }
 
-          let x = sx, y = sy
-          if (sx < p && sy < p) {
-            const dx = p - sx, dy = p - sy
+          // Clamping to curved corners using pixel math for sub-pixel smoothness
+          let x = targetX, y = targetY
+          if (targetX < r && targetY < r) {
+            const dx = r - targetX, dy = r - targetY
             const d = Math.sqrt(dx * dx + dy * dy)
-            if (d > 0) { x = p - (dx / d) * p; y = p - (dy / d) * p }
-          } else if (sx > 100 - p && sy < p) {
-            const dx = sx - (100 - p), dy = p - sy
+            if (d > 0) { x = r - (dx / d) * r; y = r - (dy / d) * r }
+          } else if (targetX > side - r && targetY < r) {
+            const dx = targetX - (side - r), dy = r - targetY
             const d = Math.sqrt(dx * dx + dy * dy)
-            if (d > 0) { x = (100 - p) + (dx / d) * p; y = p - (dy / d) * p }
-          } else if (sx > 100 - p && sy > 100 - p) {
-            const dx = sx - (100 - p), dy = sy - (100 - p)
+            if (d > 0) { x = (side - r) + (dx / d) * r; y = r - (dy / d) * r }
+          } else if (targetX > side - r && targetY > side - r) {
+            const dx = targetX - (side - r), dy = targetY - (side - r)
             const d = Math.sqrt(dx * dx + dy * dy)
-            if (d > 0) { x = (100 - p) + (dx / d) * p; y = (100 - p) + (dy / d) * p }
-          } else if (sx < p && sy > 100 - p) {
-            const dx = p - sx, dy = sy - (100 - p)
+            if (d > 0) { x = (side - r) + (dx / d) * r; y = (side - r) + (dy / d) * r }
+          } else if (targetX < r && targetY > side - r) {
+            const dx = r - targetX, dy = targetY - (side - r)
             const d = Math.sqrt(dx * dx + dy * dy)
-            if (d > 0) { x = p - (dx / d) * p; y = (100 - p) + (dy / d) * p }
+            if (d > 0) { x = r - (dx / d) * r; y = (side - r) + (dy / d) * r }
           }
 
-          dotRef.current.style.left = `${x}%`
-          dotRef.current.style.top = `${y}%`
-          dotRef.current.style.transform = 'translate3d(-50%, -50%, 0)'
+          dotRef.current.style.transform = `translate3d(${x}px, ${y}px, 0) translate3d(-50%, -50%, 0)`
         }
       } else if (activeView === 'EYE_GYM') {
         if (dotRef.current) {
           const t = elapsedRef.current / 1000
+          const side = containerSizeRef.current.width || 300
+          const centerX = side / 2
+          const centerY = (containerSizeRef.current.height || 300) / 2
 
           if (eyeGymMode === 'ACCOMMODATION') {
             const scale = 0.5 + Math.abs(Math.sin(t * 0.5)) * 2
-            dotRef.current.style.left = '50%'
-            dotRef.current.style.top = '50%'
-            dotRef.current.style.transform = `translate3d(-50%, -50%, 0) scale(${scale})`
+            dotRef.current.style.transform = `translate3d(${centerX}px, ${centerY}px, 0) translate3d(-50%, -50%, 0) scale(${scale})`
           } else if (eyeGymMode === 'PURSUIT') {
-            const scale = 40
+            const radius = Math.min(centerX, centerY) * 0.8
             const denom = 1 + Math.pow(Math.sin(t), 2)
-            const x = (scale * Math.cos(t)) / denom
-            const y = (scale * Math.sin(t) * Math.cos(t)) / denom
-            dotRef.current.style.left = `${50 + x}%`
-            dotRef.current.style.top = `${50 + y}%`
-            dotRef.current.style.transform = 'translate3d(-50%, -50%, 0) scale(1)'
+            const x = (radius * Math.cos(t)) / denom
+            const y = (radius * Math.sin(t) * Math.cos(t)) / denom
+            dotRef.current.style.transform = `translate3d(${centerX + x}px, ${centerY + y}px, 0) translate3d(-50%, -50%, 0)`
           } else if (eyeGymMode === 'SACCADES') {
             saccadeTimerRef.current += delta
             if (saccadeTimerRef.current > 1000 / speedRef.current) {
               saccadeTimerRef.current = 0
               saccadePosRef.current = {
-                x: 10 + Math.random() * 80,
-                y: 10 + Math.random() * 80
+                x: (0.1 + Math.random() * 0.8) * side,
+                y: (0.1 + Math.random() * 0.8) * (containerSizeRef.current.height || 300)
               }
             }
-            dotRef.current.style.left = `${saccadePosRef.current.x}%`
-            dotRef.current.style.top = `${saccadePosRef.current.y}%`
-            dotRef.current.style.transform = 'translate3d(-50%, -50%, 0) scale(1)'
+            dotRef.current.style.transform = `translate3d(${saccadePosRef.current.x}px, ${saccadePosRef.current.y}px, 0) translate3d(-50%, -50%, 0)`
           } else if (eyeGymMode === 'CONVERGENCE') {
-            const dist = Math.abs(Math.sin(t * 0.5)) * 40
-            dotRef.current.style.left = `${50 - dist}%`
-            dotRef.current.style.top = '50%'
-            dotRef.current.style.transform = 'translate3d(-50%, -50%, 0) scale(1)'
+            const dist = Math.abs(Math.sin(t * 0.5)) * (side * 0.4)
+            dotRef.current.style.transform = `translate3d(${centerX - dist}px, ${centerY}px, 0) translate3d(-50%, -50%, 0)`
 
             if (secondDotRef.current) {
-              secondDotRef.current.style.left = `${50 + dist}%`
-              secondDotRef.current.style.top = '50%'
-              secondDotRef.current.style.transform = 'translate3d(-50%, -50%, 0) scale(1)'
+              secondDotRef.current.style.transform = `translate3d(${centerX + dist}px, ${centerY}px, 0) translate3d(-50%, -50%, 0)`
             }
           }
         }
@@ -271,12 +310,13 @@ function App() {
     setIsActive(false)
     elapsedRef.current = 0
     lastTimeRef.current = 0
+    currentPhaseIndexRef.current = 0
     setCurrentPhaseIndex(0)
     setSessionTime(120)
     if (dotRef.current) {
-      dotRef.current.style.left = '50%'
-      dotRef.current.style.top = '50%'
-      dotRef.current.style.transform = 'translate3d(-50%, -50%, 0) scale(1)'
+      dotRef.current.style.left = '0'
+      dotRef.current.style.top = '0'
+      dotRef.current.style.transform = 'translate3d(0, 0, 0) translate3d(-50%, -50%, 0) scale(1)'
     }
   }
 
@@ -300,55 +340,38 @@ function App() {
   const currentPhase = PHASES[currentPhaseIndex] || PHASES[0]
 
   return (
-    <div className={`min-h-screen w-full flex flex-col items-center justify-center p-4 relative bg-background text-foreground transition-colors duration-500 ${isDarkMode ? 'dark' : ''} ${showGrid ? 'bg-grid' : ''}`}>
-      {/* Background Ambient Glow */}
-      <div
-        className="absolute inset-0 opacity-20 transition-colors duration-1000 blur-[150px]"
-        style={{
-          background: activeView === 'BREATHING'
-            ? `radial-gradient(circle at center, ${currentPhase.glow} 0%, transparent 80%)`
-            : eyeGymTheme === 'GREEN'
-              ? 'radial-gradient(circle at center, rgba(52, 211, 153, 0.2) 0%, transparent 80%)'
-              : eyeGymTheme === 'AMBER'
-                ? 'radial-gradient(circle at center, rgba(251, 191, 36, 0.2) 0%, transparent 80%)'
-                : 'radial-gradient(circle at center, rgba(59, 130, 246, 0.2) 0%, transparent 80%)'
-        }}
-      />
-
+    <div
+      className={`min-h-screen w-full flex flex-col items-center justify-center p-4 relative text-foreground transition-all duration-1000 ${showGrid ? 'bg-grid' : ''}`}
+      style={{ backgroundColor: (isActive && activeView === 'BREATHING') ? currentPhase.full : '#FFF9C4' }}
+    >
       {/* Navigation Layer */}
       {/* Desktop & Tablet Navigation - Hidden now, using Global Hamburger */}
-      {!isActive && activeView !== 'MENU' && (
-        <div className="absolute top-6 left-6 right-6 z-50 hidden sm:flex justify-between items-center animate-in fade-in slide-in-from-top duration-500">
-          <button
-            onClick={() => { setActiveView('MENU'); setIsActive(false); }}
-            className="px-6 py-3 rounded-xl bg-session border border-foreground/10 text-session font-bold text-xs uppercase tracking-widest hover:bg-foreground/10 active:scale-95 transition-all"
-          >
-            ← Home
-          </button>
-        </div>
-      )}
 
       {/* Global Header Bar */}
       {!isActive && (
-        <div className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-between p-6 bg-gradient-to-b from-background to-transparent pointer-events-none">
-          {/* Logo / Home Button */}
-          <button
-            onClick={() => { setActiveView('MENU'); setIsActive(false); }}
-            className="pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-session border border-foreground/10 hover:bg-foreground/5 active:scale-95 transition-all"
-          >
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-foreground/80">Protocols</span>
-          </button>
+        <div className="fixed top-0 left-0 right-0 z-[60] grid grid-cols-3 items-center p-6 pointer-events-none">
+          <div /> {/* Left zone */}
+
+          <div className="flex justify-center">
+            <button
+              onClick={() => { setActiveView('MENU'); setIsActive(false); }}
+              className="pointer-events-auto flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-session border border-foreground/5 hover:bg-foreground/10 active:scale-95 transition-all shadow-xl shadow-black/5"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-primary"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71L12 2z" /></svg>
+              <span className="text-[11px] font-black uppercase tracking-[0.5em] text-foreground/90 ml-1">Protocols</span>
+            </button>
+          </div>
 
           {/* Settings Group */}
-          <div className="flex items-center gap-2 pointer-events-auto">
+          <div className="flex justify-end gap-3 pointer-events-auto">
             <button
               onClick={() => setShowGrid(!showGrid)}
-              className={`p-3 rounded-xl bg-session border border-foreground/10 transition-all active:scale-95 ${showGrid ? 'text-primary' : 'text-foreground/40'}`}
+              className={`p-3 rounded-2xl transition-all border ${showGrid ? 'bg-foreground text-background border-transparent shadow-lg' : 'bg-background/20 backdrop-blur-md border-foreground/10 text-foreground hover:bg-background/40'}`}
               title="Toggle Grid"
             >
-              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM8 20H4v-4h4v4zm0-6H4v-4h4v4zm0-6H4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4z" /></svg>
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z" /></svg>
             </button>
+            {/* Fullscreen handled as simple toggle */}
             <button
               onClick={toggleFullscreen}
               className="p-3 rounded-xl bg-session border border-foreground/10 text-foreground/40 active:scale-95 transition-all"
@@ -364,63 +387,73 @@ function App() {
 
       <div className={`z-10 flex flex-col items-center gap-10 w-full transition-all duration-700 ${isActive && activeView === 'EYE_GYM' ? 'max-w-none h-full' : 'max-w-7xl'}`}>
         {activeView === 'MENU' && (
-          <div className="flex flex-col items-center gap-4 sm:gap-8 w-full max-w-2xl animate-in fade-in zoom-in duration-700 pt-16 sm:pt-0">
-            <header className="text-center space-y-1 sm:space-y-2 px-4">
-              <h1 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tight uppercase text-foreground/90 leading-none">
+          <div className="flex flex-col items-center gap-8 w-full max-w-5xl animate-in fade-in zoom-in duration-700 pt-20 sm:pt-0">
+            <header className="text-center space-y-2">
+              <h1 className="text-4xl sm:text-6xl font-black tracking-tight uppercase text-foreground/90 leading-none">
                 Protocols
               </h1>
-              <p className="text-foreground/30 font-bold uppercase tracking-[0.3em] text-[8px] sm:text-[10px]">
+              <p className="text-foreground/30 font-bold uppercase tracking-[0.3em] text-[10px] sm:text-xs">
                 Adaptive Wellness System
               </p>
             </header>
 
-            <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-4 w-full px-6 sm:px-4 max-w-lg sm:max-w-none">
-              <button
-                onClick={() => { setActiveView('BREATHING'); setSpeed(1); reset(); }}
-                className="group relative flex items-center gap-4 sm:flex-col sm:items-start p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] bg-foreground/[0.02] border border-foreground/10 hover:border-foreground/20 transition-all active:scale-[0.98] text-left overflow-hidden w-full"
-              >
-                <div className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 bg-primary/10 rounded-2xl flex items-center justify-center sm:absolute sm:top-6 sm:right-6 sm:bg-transparent">
-                  <div className="w-8 h-8 sm:w-12 sm:h-12 border-2 sm:border-4 border-primary rounded-lg rotate-12 opacity-40 sm:opacity-5 group-hover:opacity-20" />
-                </div>
-                <div className="space-y-1 sm:space-y-1">
-                  <span className="text-[10px] font-black tracking-[0.2em] text-primary/60 uppercase">01 Breathe</span>
-                  <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-none uppercase">Square Breath</h2>
-                  <p className="text-foreground/40 text-[11px] sm:text-xs font-medium leading-tight">Focus & CO2 tolerance protocol.</p>
-                </div>
-              </button>
-
-              <button
-                onClick={() => { setActiveView('EYE_GYM'); setSpeed(1); reset(); }}
-                className="group relative flex items-center gap-4 sm:flex-col sm:items-start p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] bg-foreground/[0.02] border border-foreground/10 hover:border-foreground/20 transition-all active:scale-[0.98] text-left overflow-hidden w-full"
-              >
-                <div className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 bg-secondary/10 rounded-2xl flex items-center justify-center sm:absolute sm:top-6 sm:right-6 sm:bg-transparent">
-                  <div className="w-8 h-8 sm:w-12 sm:h-12 border-2 sm:border-4 border-secondary rounded-full opacity-40 sm:opacity-5 group-hover:opacity-20" />
-                </div>
-                <div className="space-y-1 sm:space-y-1">
-                  <span className="text-[10px] font-black tracking-[0.2em] text-secondary/60 uppercase">02 Vision</span>
-                  <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-none uppercase">Eye Gym</h2>
-                  <p className="text-foreground/40 text-xs sm:text-sm font-medium leading-tight">Dynamic muscle tension release.</p>
-                </div>
-              </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full px-6">
+              {EXERCISES.map((ex) => (
+                <button
+                  key={ex.id}
+                  onClick={() => {
+                    if (ex.type === 'BREATHING') {
+                      setActiveView('BREATHING');
+                    } else {
+                      setEyeGymMode(ex.id as any);
+                      setActiveView('EYE_GYM');
+                    }
+                    setSpeed(1);
+                    reset();
+                  }}
+                  className="group relative flex flex-col p-6 rounded-[2rem] bg-white border border-transparent shadow-xl hover:shadow-2xl transition-all active:scale-[0.98] text-left overflow-hidden h-full"
+                >
+                  <div className={`w-12 h-12 mb-6 rounded-2xl flex items-center justify-center ${ex.bg}`}>
+                    <div className="w-8 h-8 flex items-center justify-center p-1 text-foreground">
+                      {ex.icon}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <span className={`text-[10px] font-black tracking-[0.2em] uppercase ${ex.color}`}>
+                        {ex.subtitle}
+                      </span>
+                      <h2 className="text-2xl font-black tracking-tight leading-none uppercase mt-1 text-foreground/90">
+                        {ex.title}
+                      </h2>
+                    </div>
+                    <p className="text-foreground/50 text-xs font-medium leading-relaxed">
+                      {ex.desc}
+                    </p>
+                  </div>
+                  {/* Subtle Arrow */}
+                  <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-40 transition-opacity">
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z" /></svg>
+                  </div>
+                </button>
+              ))}
             </div>
 
             {(deferredPrompt || isIOS) && (
-              <div className="flex gap-3">
-                <button
-                  onClick={handleInstallClick}
-                  className="px-8 py-3 rounded-xl bg-foreground text-background font-black uppercase tracking-widest text-[10px] hover:opacity-90 active:scale-95 transition-all shadow-xl shadow-foreground/5"
-                >
-                  Install App
-                </button>
-              </div>
+              <button
+                onClick={handleInstallClick}
+                className="px-8 py-3 rounded-xl bg-foreground text-background font-black uppercase tracking-widest text-[10px] hover:opacity-90 active:scale-95 transition-all shadow-xl shadow-foreground/5"
+              >
+                Install App
+              </button>
             )}
           </div>
         )}
 
         {activeView === 'BREATHING' && (
-          <div className={`flex flex-col items-center gap-6 sm:gap-10 w-full animate-in fade-in duration-700 ${isActive ? 'h-screen justify-center' : 'pt-20 sm:pt-0'}`}>
+          <div className={`flex flex-col items-center gap-2 sm:gap-6 w-full animate-in fade-in duration-700 ${isActive ? 'h-screen justify-center' : 'pt-16 sm:pt-20'}`}>
             {!isActive && (
-              <header className="text-center space-y-1 sm:space-y-2">
+              <header className="text-center space-y-0.5 sm:space-y-1">
                 <h1 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tight uppercase text-foreground/80 leading-none">
                   Square Breath
                 </h1>
@@ -430,15 +463,25 @@ function App() {
               </header>
             )}
 
-            <div ref={containerRef} className="relative w-[80vw] h-[80vw] max-w-[min(65vh,800px)] max-h-[min(65vh,800px)] transition-all duration-700 ease-out">
-              <div className="absolute inset-0 border-2 border-foreground/5 bg-foreground/[0.01] rounded-[2rem]" />
+            <div ref={containerRef} className="relative w-[80vw] h-[80vw] max-w-[min(70vh,600px)] max-h-[min(70vh,600px)] transition-all duration-700 ease-out aspect-square">
+              <div className={`absolute inset-0 rounded-[2rem] transition-all duration-500 ${isActive && activeView === 'BREATHING' ? 'bg-white shadow-2xl border-none' : 'border-2 border-foreground/5 bg-foreground/[0.01]'}`} />
               <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pointer-events-none">
-                <div className={`text-5xl md:text-8xl font-black tracking-tighter transition-all duration-500 scale-105 ${currentPhase.color} opacity-80 flex flex-col items-center leading-[0.9]`}>
-                  {isActive ? currentPhase.nameEn.split(' ').map((word, i) => <span key={i}>{word}</span>) : 'Ready?'}
+                <div
+                  className="transition-all duration-1000 flex flex-col items-center"
+                  style={{ color: isActive ? currentPhase.full : '' }}
+                >
+                  {isActive && (
+                    <div className="animate-in fade-in zoom-in duration-500">
+                      {currentPhase.icon}
+                    </div>
+                  )}
+                  <div className={`text-4xl md:text-7xl font-black tracking-tighter opacity-100 flex flex-col items-center leading-[0.9] ${isActive ? '' : 'text-foreground/20'}`}>
+                    {isActive ? currentPhase.nameEn.split(' ').map((word, i) => <span key={i}>{word}</span>) : 'Ready?'}
+                  </div>
                 </div>
               </div>
               {isActive && (
-                <div ref={dotRef} className={`absolute w-6 h-6 md:w-8 md:h-8 rounded-full transition-colors duration-300 ${currentPhase.bg} shadow-md`} style={{ transform: 'translate3d(-50%, -50%, 0)', boxShadow: `0 0 40px 10px ${currentPhase.glow}, inset 0 0 10px rgba(255,255,255,0.4)` }} />
+                <div ref={dotRef} className="absolute left-0 top-0 w-6 h-6 md:w-8 md:h-8 rounded-full transition-colors duration-300 bg-black shadow-lg will-change-transform" style={{ transform: 'translate3d(-50%, -50%, 0)' }} />
               )}
             </div>
 
@@ -463,48 +506,21 @@ function App() {
         )}
 
         {activeView === 'EYE_GYM' && (
-          <div className={`flex flex-col items-center gap-2 w-full animate-in fade-in duration-700 ${isActive ? 'h-screen justify-center' : 'pt-16 sm:pt-0'}`}>
+          <div className={`flex flex-col items-center gap-2 w-full animate-in fade-in duration-700 ${isActive ? 'h-screen justify-center' : 'pt-24 sm:pt-0'}`}>
             {!isActive && (
-              <div className="flex flex-col items-center gap-4 sm:gap-8 w-full max-w-xl px-6 animate-in fade-in duration-700">
+              <div className="flex flex-col items-center gap-4 w-full max-w-xl px-6 animate-in fade-in duration-700 mb-8">
                 <header className="flex flex-col items-center gap-2 text-center">
-                  <h1 className="text-4xl sm:text-6xl font-black tracking-tighter text-foreground/90 leading-none uppercase px-4">
-                    Eye Gymnastics
+                  <h1 className="text-4xl sm:text-6xl font-black tracking-tighter text-foreground/90 leading-none uppercase">
+                    {EXERCISES.find(ex => ex.id === eyeGymMode)?.title}
                   </h1>
                   <p className="text-foreground/30 font-bold uppercase tracking-[0.3em] text-[10px]">
                     Visual Performance Protocol
                   </p>
                 </header>
 
-                <div className="w-full space-y-4">
-                  <div className="flex items-center gap-4 px-2">
-                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground/40">Eye Gym Modes</span>
-                    <div className="h-px bg-foreground/5 flex-1" />
-                  </div>
-
-                  <div className="flex justify-center gap-4 w-full">
-                    {(['ACCOMMODATION', 'PURSUIT', 'SACCADES', 'CONVERGENCE'] as const).map(mode => (
-                      <button
-                        key={mode}
-                        onClick={() => { setEyeGymMode(mode); reset(); }}
-                        className={`w-14 h-14 sm:w-20 sm:h-20 rounded-[1.25rem] sm:rounded-[2rem] flex items-center justify-center transition-all border-4 ${eyeGymMode === mode
-                          ? 'bg-foreground text-background border-foreground shadow-[0_15px_30px_rgba(0,0,0,0.3)] scale-[1.15] z-10'
-                          : 'bg-foreground/[0.03] text-foreground/20 border-transparent hover:bg-foreground/[0.05] hover:text-foreground/40'
-                          }`}
-                        title={EYE_GYM_MODES[mode].title}
-                      >
-                        <div className="w-8 h-8 sm:w-12 sm:h-12 p-1">{EYE_GYM_MODES[mode].icon}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-foreground/[0.02] border border-foreground/5 w-full space-y-2">
-                  <div className="text-center">
-                    <span className="text-xs font-black uppercase tracking-widest text-foreground/80">{EYE_GYM_MODES[eyeGymMode].title}</span>
-                    <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-foreground/30">{EYE_GYM_MODES[eyeGymMode].subtitle}</p>
-                  </div>
-                  <p className="text-foreground/40 text-[10px] sm:text-xs font-medium leading-relaxed text-center italic">
-                    {EYE_GYM_MODES[eyeGymMode].desc}
+                <div className="p-6 rounded-3xl bg-foreground/[0.02] border border-foreground/5 w-full space-y-3">
+                  <p className="text-foreground/60 text-sm sm:text-base font-medium leading-relaxed text-center italic">
+                    {EXERCISES.find(ex => ex.id === eyeGymMode)?.desc}
                   </p>
                 </div>
               </div>
@@ -517,33 +533,21 @@ function App() {
                   <div className="w-64 h-64 border-[40px] border-foreground rounded-full opacity-10" />
                 </div>
               )}
-              <div
-                ref={dotRef}
-                className={`absolute w-8 h-8 rounded-full transition-colors duration-300 z-10 shadow-md ${eyeGymTheme === 'GREEN' ? 'bg-emerald-400' :
-                  eyeGymTheme === 'AMBER' ? 'bg-amber-400' : 'bg-blue-500'
-                  }`}
-                style={{
-                  left: '50%',
-                  top: '50%',
-                  transform: 'translate3d(-50%, -50%, 0)',
-                  boxShadow: `0 0 40px 10px ${eyeGymTheme === 'GREEN' ? 'rgba(52, 211, 153, 0.4)' :
-                    eyeGymTheme === 'AMBER' ? 'rgba(251, 191, 36, 0.4)' : 'rgba(59, 130, 246, 0.4)'
-                    }, inset 0 0 10px rgba(255,255,255,0.4)`
-                }}
-              />
-              {eyeGymMode === 'CONVERGENCE' && (
+              {isActive && (
+                <div
+                  ref={dotRef}
+                  className="absolute left-0 top-0 w-8 h-8 rounded-full transition-colors duration-300 z-10 shadow-md will-change-transform bg-black"
+                  style={{
+                    transform: 'translate3d(-50%, -50%, 0)',
+                  }}
+                />
+              )}
+              {isActive && eyeGymMode === 'CONVERGENCE' && (
                 <div
                   ref={secondDotRef}
-                  className={`absolute w-8 h-8 rounded-full transition-colors duration-300 z-10 shadow-md ${eyeGymTheme === 'GREEN' ? 'bg-emerald-400' :
-                    eyeGymTheme === 'AMBER' ? 'bg-amber-400' : 'bg-blue-500'
-                    }`}
+                  className="absolute left-0 top-0 w-8 h-8 rounded-full transition-colors duration-300 z-10 shadow-md will-change-transform bg-black"
                   style={{
-                    left: '50%',
-                    top: '50%',
                     transform: 'translate3d(-50%, -50%, 0)',
-                    boxShadow: `0 0 40px 10px ${eyeGymTheme === 'GREEN' ? 'rgba(52, 211, 153, 0.4)' :
-                      eyeGymTheme === 'AMBER' ? 'rgba(251, 191, 36, 0.4)' : 'rgba(59, 130, 246, 0.4)'
-                      }, inset 0 0 10px rgba(255,255,255,0.4)`
                   }}
                 />
               )}
