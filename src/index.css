@@ -10,64 +10,61 @@
   --color-muted: hsl(var(--muted));
   --color-accent: hsl(var(--accent));
 
-  --color-inhale: hsl(160 100% 45%);
-  --color-hold: #FFC107;
-  --color-exhale: hsl(195 100% 50%);
-
-  --animate-breath-in: breath-in 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  --animate-breath-hold: breath-hold 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  --animate-breath-out: breath-out 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-
-  @keyframes breath-in {
-    0% {
-      transform: scale(1);
-      opacity: 0.3;
-    }
-
-    100% {
-      transform: scale(1.5);
-      opacity: 1;
-    }
-  }
-
-  @keyframes breath-out {
-    0% {
-      transform: scale(1.5);
-      opacity: 1;
-    }
-
-    100% {
-      transform: scale(1);
-      opacity: 0.3;
-    }
-  }
+  --color-inhale: hsl(var(--inhale));
+  --color-hold: hsl(var(--hold));
+  --color-exhale: hsl(var(--exhale));
 }
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 220 20% 20%;
+    --background: 150 14% 94%;
+    --foreground: 210 18% 20%;
     --card: 0 0% 100%;
-    --primary: 210 100% 70%;
-    --primary-foreground: 220 20% 20%;
-    --secondary: 150 60% 60%;
-    --muted: 210 20% 95%;
-    --accent: 40 100% 70%;
+    --primary: 188 34% 37%;
+    --primary-foreground: 150 14% 96%;
+    --secondary: 150 24% 48%;
+    --muted: 150 12% 88%;
+    --accent: 43 58% 52%;
 
-    --color-inhale: hsl(160 100% 45%);
-    --color-hold: #FFC107;
-    --color-exhale: hsl(195 100% 50%);
+    --inhale: 154 36% 42%;
+    --hold: 42 70% 52%;
+    --exhale: 205 44% 48%;
 
-    --session-bg: 0 0% 0% / 0.1;
-    --session-text: 220 20% 20% / 0.7;
+    --session-bg: 0 0% 100% / 0.74;
+    --session-text: 210 18% 20% / 0.72;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button,
+  input {
+    font: inherit;
+  }
+
+  button {
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.18);
   }
 }
 
@@ -80,16 +77,16 @@
     background-image:
       linear-gradient(to right, currentColor 1px, transparent 1px),
       linear-gradient(to bottom, currentColor 1px, transparent 1px);
-    background-size: 40px 40px;
-    color: hsla(var(--foreground) / 0.03);
+    background-size: 44px 44px;
+    color: hsl(var(--foreground) / 0.035);
   }
 
   .bg-session {
-    background-color: hsla(var(--session-bg));
+    background-color: hsl(var(--session-bg));
   }
 
   .text-session {
-    color: hsla(var(--session-text));
+    color: hsl(var(--session-text));
   }
 
   .scrollbar-hide::-webkit-scrollbar {
@@ -99,5 +96,16 @@
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
   }
 }

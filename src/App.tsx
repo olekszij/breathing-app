@@ -1,132 +1,236 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { GiLips, GiNoseSide } from 'react-icons/gi'
 
-const PHASES = [
+type AppView = 'MENU' | 'BREATHING' | 'EYE_GYM'
+type EyeGymMode = 'ACCOMMODATION' | 'PURSUIT' | 'SACCADES' | 'CONVERGENCE'
+
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform?: string }>
+}
+
+type FullscreenElement = HTMLElement & {
+  webkitRequestFullscreen?: () => Promise<void> | void
+  msRequestFullscreen?: () => Promise<void> | void
+}
+
+type FullscreenDocument = Document & {
+  webkitExitFullscreen?: () => Promise<void> | void
+  msExitFullscreen?: () => Promise<void> | void
+}
+
+type Phase = {
+  name: string
+  hint: string
+  color: string
+  dotClass: string
+  icon: ReactNode
+}
+
+type ExerciseBase = {
+  title: string
+  subtitle: string
+  desc: string
+  color: string
+  soft: string
+  icon: ReactNode
+}
+
+type BreathingExercise = ExerciseBase & {
+  id: 'BREATHING'
+  type: 'BREATHING'
+}
+
+type EyeExercise = ExerciseBase & {
+  id: EyeGymMode
+  type: 'EYE_GYM'
+}
+
+type Exercise = BreathingExercise | EyeExercise
+
+const PHASES: Phase[] = [
   {
-    nameEn: 'Inhale',
-    color: 'text-inhale',
-    bg: 'bg-inhale',
-    full: 'var(--color-inhale)',
-    icon: <svg viewBox="0 0 24 24" className="w-12 h-12 md:w-16 md:h-16 mb-2 fill-current"><path d="M12 4l-8 8h5v8h6v-8h5z" /></svg>
+    name: 'Inhale',
+    hint: 'Inhale through nose',
+    color: 'var(--color-inhale)',
+    dotClass: 'bg-inhale',
+    icon: <GiNoseSide className="h-24 w-24" aria-hidden="true" />,
   },
   {
-    nameEn: 'Hold (Full)',
-    color: 'text-hold',
-    bg: 'bg-hold',
-    full: 'var(--color-hold)',
-    icon: <svg viewBox="0 0 24 24" className="w-10 h-10 md:w-14 md:h-14 mb-2 fill-current"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+    name: 'Hold',
+    hint: 'Stay easy',
+    color: 'var(--color-hold)',
+    dotClass: 'bg-hold',
+    icon: (
+      <svg viewBox="0 0 96 96" className="h-24 w-24 fill-none stroke-current" strokeWidth="5" strokeLinecap="round" aria-hidden="true">
+        <path d="M36 24v48" />
+        <path d="M60 24v48" />
+      </svg>
+    ),
   },
   {
-    nameEn: 'Exhale',
-    color: 'text-exhale',
-    bg: 'bg-exhale',
-    full: 'var(--color-exhale)',
-    icon: <svg viewBox="0 0 24 24" className="w-12 h-12 md:w-16 md:h-16 mb-2 fill-current"><path d="M12 20l8-8h-5V4h-6v8H4z" /></svg>
+    name: 'Exhale',
+    hint: 'Exhale through mouth',
+    color: 'var(--color-exhale)',
+    dotClass: 'bg-exhale',
+    icon: <GiLips className="h-24 w-24" aria-hidden="true" />,
   },
   {
-    nameEn: 'Hold (Empty)',
-    color: 'text-hold',
-    bg: 'bg-hold',
-    full: 'var(--color-hold)',
-    icon: <svg viewBox="0 0 24 24" className="w-10 h-10 md:w-14 md:h-14 mb-2 fill-current"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+    name: 'Hold',
+    hint: 'Rest empty',
+    color: 'var(--color-hold)',
+    dotClass: 'bg-hold',
+    icon: (
+      <svg viewBox="0 0 96 96" className="h-24 w-24 fill-none stroke-current" strokeWidth="5" strokeLinecap="round" aria-hidden="true">
+        <path d="M36 24v48" />
+        <path d="M60 24v48" />
+      </svg>
+    ),
   },
 ]
 
-type AppView = 'MENU' | 'BREATHING' | 'EYE_GYM'
-
-const EXERCISES = [
+const EXERCISES: Exercise[] = [
   {
     id: 'BREATHING',
-    type: 'BREATHING' as const,
+    type: 'BREATHING',
     title: 'Square Breath',
-    subtitle: 'CO2 Tolerance',
-    desc: 'Square breathing technique to regulate nervous system and build CO2 tolerance.',
-    icon: <div className="w-8 h-8 sm:w-12 sm:h-12 border-2 sm:border-4 border-primary rounded-lg rotate-12 opacity-80" />,
+    subtitle: 'CO2 tolerance',
+    desc: 'A quiet 4-4-4-4 breathing loop for settling the nervous system.',
     color: 'text-primary',
-    bg: 'bg-primary/10'
+    soft: 'bg-primary/10',
+    icon: <div className="h-7 w-7 rounded-lg border-2 border-current" aria-hidden="true" />,
   },
   {
     id: 'ACCOMMODATION',
-    type: 'EYE_GYM' as const,
+    type: 'EYE_GYM',
     title: 'Accommodation',
-    subtitle: 'Dynamic Focus',
-    desc: 'Focus on the dot as it changes size to train lens muscles and reduce strain.',
-    icon: <svg viewBox="0 0 24 24" className="w-full h-full fill-current"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" /></svg>,
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-400/10'
+    subtitle: 'Dynamic focus',
+    desc: 'Follow one point as it gently changes size to train focus control.',
+    color: 'text-inhale',
+    soft: 'bg-inhale/10',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-7 w-7 fill-current" aria-hidden="true">
+        <path d="M12 5C7 5 3.1 7.8 1.5 12 3.1 16.2 7 19 12 19s8.9-2.8 10.5-7C20.9 7.8 17 5 12 5zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0-2.3a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4z" />
+      </svg>
+    ),
   },
   {
     id: 'PURSUIT',
-    type: 'EYE_GYM' as const,
+    type: 'EYE_GYM',
     title: 'Smoothing',
-    subtitle: 'Infinity Tracking',
-    desc: 'Follow the dot as it traces an infinity path to improve muscle coordination.',
-    icon: <svg viewBox="0 0 24 24" className="w-full h-full fill-current"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z" /></svg>,
-    color: 'text-blue-400',
-    bg: 'bg-blue-400/10'
+    subtitle: 'Infinity tracking',
+    desc: 'Track a smooth infinity path for coordinated eye movement.',
+    color: 'text-exhale',
+    soft: 'bg-exhale/10',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-7 w-7 fill-current" aria-hidden="true">
+        <path d="M8.2 8.2c1.3 0 2.5.7 3.8 1.9 1.3-1.2 2.5-1.9 3.8-1.9 2.5 0 4.2 1.8 4.2 3.8s-1.7 3.8-4.2 3.8c-1.3 0-2.5-.7-3.8-1.9-1.3 1.2-2.5 1.9-3.8 1.9C5.7 15.8 4 14 4 12s1.7-3.8 4.2-3.8zm0 2C6.9 10.2 6 11 6 12s.9 1.8 2.2 1.8c.8 0 1.6-.4 2.6-1.2-1-.9-1.8-2.4-2.6-2.4zm7.6 0c-.8 0-1.6.4-2.6 1.2 1 .8 1.8 2.4 2.6 2.4 1.3 0 2.2-.8 2.2-1.8s-.9-1.8-2.2-1.8z" />
+      </svg>
+    ),
   },
   {
     id: 'SACCADES',
-    type: 'EYE_GYM' as const,
+    type: 'EYE_GYM',
     title: 'Saccades',
-    subtitle: 'Rapid Jump',
-    desc: 'Follow the dot as it jumps between random positions to increase acquisition speed.',
-    icon: <svg viewBox="0 0 24 24" className="w-full h-full fill-current"><path d="M7 2v10h3l-4 4-4-4h3V2h2zm14 10h-3V2h-2v10h-3l4 4 4-4z" /></svg>,
-    color: 'text-amber-400',
-    bg: 'bg-amber-400/10'
+    subtitle: 'Rapid jump',
+    desc: 'Move between clear targets with a short, controlled glide.',
+    color: 'text-hold',
+    soft: 'bg-hold/10',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-7 w-7 fill-current" aria-hidden="true">
+        <path d="M5 5h7v2H8.4l4.3 4.3-1.4 1.4L7 8.4V12H5V5zm14 14h-7v-2h3.6l-4.3-4.3 1.4-1.4 4.3 4.3V12h2v7z" />
+      </svg>
+    ),
   },
   {
     id: 'CONVERGENCE',
-    type: 'EYE_GYM' as const,
+    type: 'EYE_GYM',
     title: 'Bilateral',
-    subtitle: 'Vergence Training',
-    desc: 'Focus as two dots merge and separate to train binocular vision and depth.',
-    icon: <svg viewBox="0 0 24 24" className="w-full h-full fill-current"><path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3L5 6.99h3V14h2V6.99h3L9 3z" /></svg>,
-    color: 'text-indigo-400',
-    bg: 'bg-indigo-400/10'
-  }
+    subtitle: 'Vergence training',
+    desc: 'Focus as two points separate and return with an eased rhythm.',
+    color: 'text-primary',
+    soft: 'bg-primary/10',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-7 w-7 fill-current" aria-hidden="true">
+        <path d="M8 4 4 8l4 4V9h8v3l4-4-4-4v3H8V4zm8 16 4-4-4-4v3H8v-3l-4 4 4 4v-3h8v3z" />
+      </svg>
+    ),
+  },
 ]
+
+const formatTime = (seconds: number) => (
+  `${Math.floor(seconds / 60)}:${Math.floor(seconds % 60).toString().padStart(2, '0')}`
+)
+
+const smootherStep = (value: number) => {
+  const clamped = Math.min(1, Math.max(0, value))
+  return clamped * clamped * clamped * (clamped * (clamped * 6 - 15) + 10)
+}
+const easeOutCubic = (value: number) => 1 - Math.pow(1 - value, 3)
+const lerp = (start: number, end: number, amount: number) => start + (end - start) * amount
+
+const getStoredGridPreference = () => {
+  try {
+    return localStorage.getItem('showGrid') === 'true'
+  } catch {
+    return false
+  }
+}
+
+const isAppleMobile = () => {
+  if (typeof navigator === 'undefined' || typeof window === 'undefined') return false
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window)
+}
 
 function App() {
   const [activeView, setActiveView] = useState<AppView>('MENU')
   const [isActive, setIsActive] = useState(false)
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
-  const [isIOS, setIsIOS] = useState(false)
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [isIOS] = useState(isAppleMobile)
   const [showIOSInstructions, setShowIOSInstructions] = useState(false)
   const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0)
-  const currentPhaseIndexRef = useRef(0)
   const [showCelebration, setShowCelebration] = useState(false)
   const [showLandscapeHint, setShowLandscapeHint] = useState(true)
-  const [showGrid, setShowGrid] = useState(() => localStorage.getItem('showGrid') === 'true')
-
-  useEffect(() => {
-    localStorage.setItem('showGrid', showGrid.toString())
-  }, [showGrid])
-
-  // Cleanup lingered Service Workers from other projects on the same port
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        for (const registration of registrations) {
-          registration.unregister();
-        }
-      });
-    }
-  }, [])
-
-  // Settings
+  const [showGrid, setShowGrid] = useState(getStoredGridPreference)
   const [speed, setSpeed] = useState(1)
+  const [sessionTime, setSessionTime] = useState(120)
+  const [eyeGymMode, setEyeGymMode] = useState<EyeGymMode>('ACCOMMODATION')
 
+  const currentPhaseIndexRef = useRef(0)
   const lastTimeRef = useRef<number>(0)
   const elapsedRef = useRef<number>(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const dotRef = useRef<HTMLDivElement>(null)
   const secondDotRef = useRef<HTMLDivElement>(null)
-  // Eye Gym Settings
-  const [eyeGymMode, setEyeGymMode] = useState<'ACCOMMODATION' | 'PURSUIT' | 'SACCADES' | 'CONVERGENCE'>('ACCOMMODATION')
+  const breathPathRef = useRef<SVGPathElement>(null)
+  const breathPointRef = useRef<{ x: number; y: number } | null>(null)
   const containerSizeRef = useRef({ width: 0, height: 0 })
   const speedRef = useRef(speed)
   const saccadeTimerRef = useRef(0)
-  const saccadePosRef = useRef({ x: 0, y: 0 })
+  const saccadeFromRef = useRef({ x: 0, y: 0 })
+  const saccadeTargetRef = useRef({ x: 0, y: 0 })
+  const saccadeCurrentRef = useRef({ x: 0, y: 0 })
+  const saccadeTravelRef = useRef(1)
+
+  const currentPhase = PHASES[currentPhaseIndex] || PHASES[0]
+  const currentExercise = EXERCISES.find((exercise) => exercise.id === eyeGymMode)
+  const appStyle = {
+    '--phase-color': currentPhase.color,
+  } as CSSProperties & Record<'--phase-color', string>
+
+  useEffect(() => {
+    localStorage.setItem('showGrid', showGrid.toString())
+  }, [showGrid])
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) {
+          registration.unregister()
+        }
+      })
+    }
+  }, [])
 
   useEffect(() => {
     speedRef.current = speed
@@ -147,57 +251,39 @@ function App() {
     }
 
     return () => observer.disconnect()
-  }, [activeView])
-
-  const [sessionTime, setSessionTime] = useState(120) // 2 minutes in seconds
+  }, [activeView, isActive])
 
   useEffect(() => {
-    // Detect iOS
-    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
-    setIsIOS(isIOSDevice)
-
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault()
-      setDeferredPrompt(e)
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault()
+      setDeferredPrompt(event as BeforeInstallPromptEvent)
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-    }
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
   }, [])
 
   useEffect(() => {
-    let interval: any
+    let interval: ReturnType<typeof setInterval> | undefined
+
     if (isActive && (activeView === 'EYE_GYM' || activeView === 'BREATHING')) {
       interval = setInterval(() => {
-        setSessionTime(prev => {
+        setSessionTime((prev) => {
           if (prev <= 1) {
             setIsActive(false)
             setShowCelebration(true)
-            clearInterval(interval)
             return 0
           }
+
           return prev - 1
         })
       }, 1000)
     }
-    return () => clearInterval(interval)
-  }, [isActive, activeView])
 
-  const handleInstallClick = async () => {
-    if (isIOS) {
-      setShowIOSInstructions(true)
-      return
+    return () => {
+      if (interval) clearInterval(interval)
     }
-    if (!deferredPrompt) return
-    deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null)
-    }
-  }
+  }, [isActive, activeView])
 
   useEffect(() => {
     if (!isActive) return
@@ -208,92 +294,106 @@ function App() {
       if (lastTimeRef.current === 0) {
         lastTimeRef.current = now
       }
+
       const delta = now - lastTimeRef.current
       lastTimeRef.current = now
-
-      elapsedRef.current = (elapsedRef.current + delta * speedRef.current)
+      elapsedRef.current += delta * speedRef.current
 
       if (activeView === 'BREATHING') {
         const duration = 16000
+        const phaseDuration = duration / PHASES.length
         const time = elapsedRef.current % duration
+        const phaseIdx = Math.floor(time / phaseDuration)
 
-        if (dotRef.current && containerRef.current) {
-          const phaseIdx = Math.floor(time / 4000)
-          const phaseElapsed = time % 4000
-          const progress = phaseElapsed / 4000
+        if (phaseIdx !== currentPhaseIndexRef.current) {
+          currentPhaseIndexRef.current = phaseIdx
+          setCurrentPhaseIndex(phaseIdx)
+        }
 
-          if (phaseIdx !== currentPhaseIndexRef.current) {
-            currentPhaseIndexRef.current = phaseIdx
-            setCurrentPhaseIndex(phaseIdx)
+        const path = breathPathRef.current
+        const dot = dotRef.current
+        const { width, height } = containerSizeRef.current
+
+        if (path && dot && width > 0 && height > 0) {
+          const phaseElapsed = time % phaseDuration
+          const easedPhaseProgress = smootherStep(phaseElapsed / phaseDuration)
+          const pathLength = path.getTotalLength()
+          const pathPosition = ((phaseIdx + easedPhaseProgress) / PHASES.length) * pathLength
+          const point = path.getPointAtLength(pathPosition)
+          const x = (point.x / 100) * width
+          const y = (point.y / 100) * height
+          const previous = breathPointRef.current ?? { x, y }
+          const damping = 1 - Math.exp(-delta / 120)
+          const smoothed = {
+            x: lerp(previous.x, x, damping),
+            y: lerp(previous.y, y, damping),
           }
 
-          const side = containerSizeRef.current.width || 300
-          const r = 32 // radius of the corner curve in pixels
+          breathPointRef.current = smoothed
+          dot.style.transform = `translate3d(${smoothed.x}px, ${smoothed.y}px, 0) translate3d(-50%, -50%, 0)`
+        }
+      }
 
-          let targetX = 0, targetY = 0
-          if (phaseIdx === 0) { targetX = progress * side; targetY = 0 }
-          else if (phaseIdx === 1) { targetX = side; targetY = progress * side }
-          else if (phaseIdx === 2) { targetX = (1 - progress) * side; targetY = side }
-          else { targetX = 0; targetY = (1 - progress) * side }
+      if (activeView === 'EYE_GYM' && dotRef.current) {
+        const t = elapsedRef.current / 1000
+        const { width, height } = containerSizeRef.current
+        const side = width || 300
+        const areaHeight = height || 300
+        const centerX = side / 2
+        const centerY = areaHeight / 2
 
-          // Clamping to curved corners using pixel math for sub-pixel smoothness
-          let x = targetX, y = targetY
-          if (targetX < r && targetY < r) {
-            const dx = r - targetX, dy = r - targetY
-            const d = Math.sqrt(dx * dx + dy * dy)
-            if (d > 0) { x = r - (dx / d) * r; y = r - (dy / d) * r }
-          } else if (targetX > side - r && targetY < r) {
-            const dx = targetX - (side - r), dy = r - targetY
-            const d = Math.sqrt(dx * dx + dy * dy)
-            if (d > 0) { x = (side - r) + (dx / d) * r; y = r - (dy / d) * r }
-          } else if (targetX > side - r && targetY > side - r) {
-            const dx = targetX - (side - r), dy = targetY - (side - r)
-            const d = Math.sqrt(dx * dx + dy * dy)
-            if (d > 0) { x = (side - r) + (dx / d) * r; y = (side - r) + (dy / d) * r }
-          } else if (targetX < r && targetY > side - r) {
-            const dx = r - targetX, dy = targetY - (side - r)
-            const d = Math.sqrt(dx * dx + dy * dy)
-            if (d > 0) { x = r - (dx / d) * r; y = (side - r) + (dy / d) * r }
+        if (eyeGymMode === 'ACCOMMODATION') {
+          const scale = 0.7 + (0.5 - Math.cos(t * 0.72) / 2) * 1.15
+          dotRef.current.style.transform = `translate3d(${centerX}px, ${centerY}px, 0) translate3d(-50%, -50%, 0) scale(${scale})`
+        }
+
+        if (eyeGymMode === 'PURSUIT') {
+          const radius = Math.min(centerX, centerY) * 0.72
+          const time = t * 0.74
+          const denom = 1 + Math.pow(Math.sin(time), 2)
+          const x = (radius * Math.cos(time)) / denom
+          const y = (radius * Math.sin(time) * Math.cos(time)) / denom
+          dotRef.current.style.transform = `translate3d(${centerX + x}px, ${centerY + y}px, 0) translate3d(-50%, -50%, 0)`
+        }
+
+        if (eyeGymMode === 'SACCADES') {
+          if (saccadeTargetRef.current.x === 0 && saccadeTargetRef.current.y === 0) {
+            saccadeFromRef.current = { x: centerX, y: centerY }
+            saccadeTargetRef.current = { x: centerX, y: centerY }
+            saccadeCurrentRef.current = { x: centerX, y: centerY }
           }
 
+          saccadeTimerRef.current += delta
+          const holdMs = 900 / speedRef.current
+          const travelMs = 220 / speedRef.current
+
+          if (saccadeTimerRef.current > holdMs + travelMs) {
+            saccadeTimerRef.current = 0
+            saccadeFromRef.current = saccadeCurrentRef.current
+            saccadeTargetRef.current = {
+              x: (0.14 + Math.random() * 0.72) * side,
+              y: (0.16 + Math.random() * 0.68) * areaHeight,
+            }
+          }
+
+          saccadeTravelRef.current = Math.min(1, saccadeTimerRef.current / travelMs)
+          const eased = easeOutCubic(saccadeTravelRef.current)
+          const x = lerp(saccadeFromRef.current.x, saccadeTargetRef.current.x, eased)
+          const y = lerp(saccadeFromRef.current.y, saccadeTargetRef.current.y, eased)
+          saccadeCurrentRef.current = { x, y }
           dotRef.current.style.transform = `translate3d(${x}px, ${y}px, 0) translate3d(-50%, -50%, 0)`
         }
-      } else if (activeView === 'EYE_GYM') {
-        if (dotRef.current) {
-          const t = elapsedRef.current / 1000
-          const side = containerSizeRef.current.width || 300
-          const centerX = side / 2
-          const centerY = (containerSizeRef.current.height || 300) / 2
 
-          if (eyeGymMode === 'ACCOMMODATION') {
-            const scale = 0.5 + Math.abs(Math.sin(t * 0.5)) * 2
-            dotRef.current.style.transform = `translate3d(${centerX}px, ${centerY}px, 0) translate3d(-50%, -50%, 0) scale(${scale})`
-          } else if (eyeGymMode === 'PURSUIT') {
-            const radius = Math.min(centerX, centerY) * 0.8
-            const denom = 1 + Math.pow(Math.sin(t), 2)
-            const x = (radius * Math.cos(t)) / denom
-            const y = (radius * Math.sin(t) * Math.cos(t)) / denom
-            dotRef.current.style.transform = `translate3d(${centerX + x}px, ${centerY + y}px, 0) translate3d(-50%, -50%, 0)`
-          } else if (eyeGymMode === 'SACCADES') {
-            saccadeTimerRef.current += delta
-            if (saccadeTimerRef.current > 1000 / speedRef.current) {
-              saccadeTimerRef.current = 0
-              saccadePosRef.current = {
-                x: (0.1 + Math.random() * 0.8) * side,
-                y: (0.1 + Math.random() * 0.8) * (containerSizeRef.current.height || 300)
-              }
-            }
-            dotRef.current.style.transform = `translate3d(${saccadePosRef.current.x}px, ${saccadePosRef.current.y}px, 0) translate3d(-50%, -50%, 0)`
-          } else if (eyeGymMode === 'CONVERGENCE') {
-            const dist = Math.abs(Math.sin(t * 0.5)) * (side * 0.4)
-            dotRef.current.style.transform = `translate3d(${centerX - dist}px, ${centerY}px, 0) translate3d(-50%, -50%, 0)`
+        if (eyeGymMode === 'CONVERGENCE') {
+          const distance = (0.5 - Math.cos(t * 0.7) / 2) * Math.min(side, areaHeight) * 0.34
+          dotRef.current.style.transform = `translate3d(${centerX - distance}px, ${centerY}px, 0) translate3d(-50%, -50%, 0)`
 
-            if (secondDotRef.current) {
-              secondDotRef.current.style.transform = `translate3d(${centerX + dist}px, ${centerY}px, 0) translate3d(-50%, -50%, 0)`
-            }
+          if (secondDotRef.current) {
+            secondDotRef.current.style.transform = `translate3d(${centerX + distance}px, ${centerY}px, 0) translate3d(-50%, -50%, 0)`
           }
         }
       }
+
       frameId = requestAnimationFrame(tick)
     }
 
@@ -301,139 +401,173 @@ function App() {
     return () => cancelAnimationFrame(frameId)
   }, [isActive, activeView, eyeGymMode])
 
-  const toggleActive = () => {
-    if (!isActive) lastTimeRef.current = performance.now()
-    setIsActive(!isActive)
+  const resetMotion = () => {
+    elapsedRef.current = 0
+    lastTimeRef.current = 0
+    currentPhaseIndexRef.current = 0
+    saccadeTimerRef.current = 0
+    saccadeFromRef.current = { x: 0, y: 0 }
+    saccadeTargetRef.current = { x: 0, y: 0 }
+    saccadeCurrentRef.current = { x: 0, y: 0 }
+    breathPointRef.current = null
+    setCurrentPhaseIndex(0)
+
+    if (dotRef.current) {
+      dotRef.current.style.transform = 'translate3d(50%, 50%, 0) translate3d(-50%, -50%, 0) scale(1)'
+    }
+
+    if (secondDotRef.current) {
+      secondDotRef.current.style.transform = 'translate3d(50%, 50%, 0) translate3d(-50%, -50%, 0)'
+    }
   }
 
   const reset = () => {
     setIsActive(false)
-    elapsedRef.current = 0
-    lastTimeRef.current = 0
-    currentPhaseIndexRef.current = 0
-    setCurrentPhaseIndex(0)
     setSessionTime(120)
-    if (dotRef.current) {
-      dotRef.current.style.left = '0'
-      dotRef.current.style.top = '0'
-      dotRef.current.style.transform = 'translate3d(0, 0, 0) translate3d(-50%, -50%, 0) scale(1)'
+    resetMotion()
+  }
+
+  const startExercise = () => {
+    resetMotion()
+    setIsActive(true)
+  }
+
+  const toggleActive = () => {
+    if (isActive) {
+      setIsActive(false)
+      return
+    }
+
+    startExercise()
+  }
+
+  const selectExercise = (exercise: Exercise) => {
+    reset()
+    setSpeed(1)
+
+    if (exercise.type === 'BREATHING') {
+      setActiveView('BREATHING')
+      return
+    }
+
+    setEyeGymMode(exercise.id)
+    setActiveView('EYE_GYM')
+  }
+
+  const handleInstallClick = async () => {
+    if (isIOS) {
+      setShowIOSInstructions(true)
+      return
+    }
+
+    if (!deferredPrompt) return
+
+    await deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null)
     }
   }
 
   const toggleFullscreen = async () => {
     try {
+      const fullscreenDocument = document as FullscreenDocument
+
       if (!document.fullscreenElement) {
-        const elem = document.documentElement as any
-        if (elem.requestFullscreen) await elem.requestFullscreen()
-        else if (elem.webkitRequestFullscreen) await elem.webkitRequestFullscreen()
-        else if (elem.msRequestFullscreen) await elem.msRequestFullscreen()
-      } else {
-        if (document.exitFullscreen) await document.exitFullscreen()
-        else if ((document as any).webkitExitFullscreen) await (document as any).webkitExitFullscreen()
-        else if ((document as any).msExitFullscreen) await (document as any).msExitFullscreen()
+        const element = document.documentElement as FullscreenElement
+
+        if (element.requestFullscreen) await element.requestFullscreen()
+        else if (element.webkitRequestFullscreen) await element.webkitRequestFullscreen()
+        else if (element.msRequestFullscreen) await element.msRequestFullscreen()
+      } else if (document.exitFullscreen) {
+        await document.exitFullscreen()
+      } else if (fullscreenDocument.webkitExitFullscreen) {
+        await fullscreenDocument.webkitExitFullscreen()
+      } else if (fullscreenDocument.msExitFullscreen) {
+        await fullscreenDocument.msExitFullscreen()
       }
     } catch (err) {
       console.warn('Fullscreen toggle failed:', err)
     }
   }
 
-  const currentPhase = PHASES[currentPhaseIndex] || PHASES[0]
-
   return (
     <div
-      className={`min-h-screen w-full flex flex-col items-center justify-center p-4 relative text-foreground transition-all duration-1000 ${showGrid ? 'bg-grid' : ''}`}
-      style={{ backgroundColor: (isActive && activeView === 'BREATHING') ? currentPhase.full : '#FFF9C4' }}
+      className={`min-h-screen w-full bg-background text-foreground ${showGrid && !isActive ? 'bg-grid' : ''}`}
+      style={appStyle}
     >
-      {/* Navigation Layer */}
-      {/* Desktop & Tablet Navigation - Hidden now, using Global Hamburger */}
-
-      {/* Global Header Bar */}
       {!isActive && (
-        <div className="fixed top-0 left-0 right-0 z-[60] grid grid-cols-3 items-center p-6 pointer-events-none">
-          <div /> {/* Left zone */}
+        <header className="fixed left-0 right-0 top-0 z-50 grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 py-4 sm:px-6">
+          <div />
 
-          <div className="flex justify-center">
-            <button
-              onClick={() => { setActiveView('MENU'); setIsActive(false); }}
-              className="pointer-events-auto flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-session border border-foreground/5 hover:bg-foreground/10 active:scale-95 transition-all shadow-xl shadow-black/5"
-            >
-              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-primary"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71L12 2z" /></svg>
-              <span className="text-[11px] font-black uppercase tracking-[0.5em] text-foreground/90 ml-1">Protocols</span>
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              reset()
+              setActiveView('MENU')
+            }}
+            className="inline-flex h-11 items-center gap-2 rounded-lg border border-foreground/10 bg-card/80 px-4 text-sm font-semibold text-foreground/80 shadow-sm backdrop-blur transition-[background-color,border-color,transform] duration-200 hover:bg-card active:scale-[0.98]"
+          >
+            <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden="true" />
+            Protocols
+          </button>
 
-          {/* Settings Group */}
-          <div className="flex justify-end gap-3 pointer-events-auto">
+          <div className="flex justify-end gap-2">
             <button
-              onClick={() => setShowGrid(!showGrid)}
-              className={`p-3 rounded-2xl transition-all border ${showGrid ? 'bg-foreground text-background border-transparent shadow-lg' : 'bg-background/20 backdrop-blur-md border-foreground/10 text-foreground hover:bg-background/40'}`}
-              title="Toggle Grid"
+              onClick={() => setShowGrid((value) => !value)}
+              className={`grid h-11 w-11 place-items-center rounded-lg border transition-[background-color,border-color,color,transform] duration-200 active:scale-95 ${showGrid ? 'border-primary bg-primary text-primary-foreground' : 'border-foreground/10 bg-card/75 text-foreground/55 hover:bg-card'}`}
+              aria-label="Toggle grid"
+              title="Toggle grid"
             >
-              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z" /></svg>
+              <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
+                <path d="M4 4h7v7H4V4zm2 2v3h3V6H6zm7-2h7v7h-7V4zm2 2v3h3V6h-3zM4 13h7v7H4v-7zm2 2v3h3v-3H6zm7-2h7v7h-7v-7zm2 2v3h3v-3h-3z" />
+              </svg>
             </button>
-            {/* Fullscreen handled as simple toggle */}
+
             <button
               onClick={toggleFullscreen}
-              className="p-3 rounded-xl bg-session border border-foreground/10 text-foreground/40 active:scale-95 transition-all"
-              title="Toggle Fullscreen"
+              className="grid h-11 w-11 place-items-center rounded-lg border border-foreground/10 bg-card/75 text-foreground/55 transition-[background-color,color,transform] duration-200 hover:bg-card active:scale-95"
+              aria-label="Toggle fullscreen"
+              title="Toggle fullscreen"
             >
-              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" /></svg>
+              <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
+                <path d="M5 5h6v2H7v4H5V5zm12 2h-4V5h6v6h-2V7zM7 13v4h4v2H5v-6h2zm12 0v6h-6v-2h4v-4h2z" />
+              </svg>
             </button>
           </div>
-        </div>
+        </header>
       )}
 
-      {/* Global Menu Removed */}
-
-      <div className={`z-10 flex flex-col items-center gap-10 w-full transition-all duration-700 ${isActive && activeView === 'EYE_GYM' ? 'max-w-none h-full' : 'max-w-7xl'}`}>
+      <main className={`relative z-10 flex min-h-screen w-full flex-col items-center ${isActive && activeView === 'EYE_GYM' ? 'justify-center' : 'justify-center px-4 py-24'}`}>
         {activeView === 'MENU' && (
-          <div className="flex flex-col items-center gap-8 w-full max-w-5xl animate-in fade-in zoom-in duration-700 pt-20 sm:pt-0">
-            <header className="text-center space-y-2">
-              <h1 className="text-4xl sm:text-6xl font-black tracking-tight uppercase text-foreground/90 leading-none">
-                Protocols
-              </h1>
-              <p className="text-foreground/30 font-bold uppercase tracking-[0.3em] text-[10px] sm:text-xs">
-                Adaptive Wellness System
-              </p>
-            </header>
+          <section className="flex w-full max-w-5xl flex-col items-center gap-8">
+            <div className="space-y-2 text-center">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-foreground/45">Adaptive wellness system</p>
+              <h1 className="text-4xl font-semibold tracking-normal text-foreground sm:text-5xl">Protocols</h1>
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full px-6">
-              {EXERCISES.map((ex) => (
+            <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {EXERCISES.map((exercise) => (
                 <button
-                  key={ex.id}
-                  onClick={() => {
-                    if (ex.type === 'BREATHING') {
-                      setActiveView('BREATHING');
-                    } else {
-                      setEyeGymMode(ex.id as any);
-                      setActiveView('EYE_GYM');
-                    }
-                    setSpeed(1);
-                    reset();
-                  }}
-                  className="group relative flex flex-col p-6 rounded-[2rem] bg-white border border-transparent shadow-xl hover:shadow-2xl transition-all active:scale-[0.98] text-left overflow-hidden h-full"
+                  key={exercise.id}
+                  onClick={() => selectExercise(exercise)}
+                  className="group flex min-h-48 flex-col justify-between rounded-lg border border-foreground/10 bg-card p-5 text-left shadow-sm transition-[border-color,background-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md active:translate-y-0"
                 >
-                  <div className={`w-12 h-12 mb-6 rounded-2xl flex items-center justify-center ${ex.bg}`}>
-                    <div className="w-8 h-8 flex items-center justify-center p-1 text-foreground">
-                      {ex.icon}
-                    </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <span className={`grid h-12 w-12 place-items-center rounded-lg ${exercise.soft} ${exercise.color}`}>
+                      {exercise.icon}
+                    </span>
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current text-foreground/25 transition-[opacity,transform] duration-200 group-hover:translate-x-0.5 group-hover:text-foreground/45" aria-hidden="true">
+                      <path d="m13 5-1.4 1.4 4.6 4.6H5v2h11.2l-4.6 4.6L13 19l7-7-7-7z" />
+                    </svg>
                   </div>
-                  <div className="space-y-2">
-                    <div>
-                      <span className={`text-[10px] font-black tracking-[0.2em] uppercase ${ex.color}`}>
-                        {ex.subtitle}
-                      </span>
-                      <h2 className="text-2xl font-black tracking-tight leading-none uppercase mt-1 text-foreground/90">
-                        {ex.title}
-                      </h2>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <p className={`text-xs font-semibold ${exercise.color}`}>{exercise.subtitle}</p>
+                      <h2 className="text-2xl font-semibold tracking-normal text-foreground">{exercise.title}</h2>
                     </div>
-                    <p className="text-foreground/50 text-xs font-medium leading-relaxed">
-                      {ex.desc}
-                    </p>
-                  </div>
-                  {/* Subtle Arrow */}
-                  <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-40 transition-opacity">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z" /></svg>
+                    <p className="max-w-sm text-sm leading-6 text-foreground/58">{exercise.desc}</p>
                   </div>
                 </button>
               ))}
@@ -442,240 +576,270 @@ function App() {
             {(deferredPrompt || isIOS) && (
               <button
                 onClick={handleInstallClick}
-                className="px-8 py-3 rounded-xl bg-foreground text-background font-black uppercase tracking-widest text-[10px] hover:opacity-90 active:scale-95 transition-all shadow-xl shadow-foreground/5"
+                className="rounded-lg bg-foreground px-6 py-3 text-sm font-semibold text-background shadow-sm transition-[opacity,transform] duration-200 hover:opacity-90 active:scale-[0.98]"
               >
-                Install App
+                Install app
               </button>
             )}
-          </div>
+          </section>
         )}
 
         {activeView === 'BREATHING' && (
-          <div className={`flex flex-col items-center gap-2 sm:gap-6 w-full animate-in fade-in duration-700 ${isActive ? 'h-screen justify-center' : 'pt-16 sm:pt-20'}`}>
+          <section className={`flex w-full flex-col items-center gap-8 ${isActive ? 'min-h-screen justify-center px-4 py-14' : 'max-w-3xl'}`}>
             {!isActive && (
-              <header className="text-center space-y-0.5 sm:space-y-1">
-                <h1 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tight uppercase text-foreground/80 leading-none">
-                  Square Breath
-                </h1>
-                <p className="text-foreground/30 font-bold uppercase tracking-[0.2em] text-[8px] sm:text-xs">
-                  Respiration Sync Protocol
-                </p>
-              </header>
+              <div className="space-y-3 text-center">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-foreground/40">4 · 4 · 4 · 4</p>
+                <h1 className="text-4xl font-medium tracking-normal text-foreground sm:text-5xl">Square Breath</h1>
+              </div>
             )}
 
-            <div ref={containerRef} className="relative w-[80vw] h-[80vw] max-w-[min(70vh,600px)] max-h-[min(70vh,600px)] transition-all duration-700 ease-out aspect-square">
-              <div className={`absolute inset-0 rounded-[2rem] transition-all duration-500 ${isActive && activeView === 'BREATHING' ? 'bg-white shadow-2xl border-none' : 'border-2 border-foreground/5 bg-foreground/[0.01]'}`} />
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center pointer-events-none">
+            <div
+              ref={containerRef}
+              className="relative aspect-square w-[min(76vw,64vh,520px)] rounded-lg transition-[width,height,transform] duration-500 ease-out"
+            >
+              <svg className="pointer-events-none absolute inset-0 h-0 w-0 overflow-hidden" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <path
+                  ref={breathPathRef}
+                  d="M 8 2 H 92 Q 98 2 98 8 V 92 Q 98 98 92 98 H 8 Q 2 98 2 92 V 8 Q 2 2 8 2"
+                  fill="none"
+                  stroke="transparent"
+                  strokeWidth="0"
+                  pathLength="100"
+                />
+              </svg>
+
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 p-8 text-center">
                 <div
-                  className="transition-all duration-1000 flex flex-col items-center"
-                  style={{ color: isActive ? currentPhase.full : '' }}
+                  className="grid h-24 w-24 place-items-center text-foreground/22 transition-[color,opacity,transform] duration-500"
+                  style={{ color: isActive ? currentPhase.color : undefined }}
+                  aria-hidden="true"
                 >
-                  {isActive && (
-                    <div className="animate-in fade-in zoom-in duration-500">
-                      {currentPhase.icon}
-                    </div>
-                  )}
-                  <div className={`text-4xl md:text-7xl font-black tracking-tighter opacity-100 flex flex-col items-center leading-[0.9] ${isActive ? '' : 'text-foreground/20'}`}>
-                    {isActive ? currentPhase.nameEn.split(' ').map((word, i) => <span key={i}>{word}</span>) : 'Ready?'}
-                  </div>
+                  {isActive ? currentPhase.icon : <span className="h-1 w-10 rounded-full bg-current" />}
                 </div>
-              </div>
-              {isActive && (
-                <div ref={dotRef} className="absolute left-0 top-0 w-6 h-6 md:w-8 md:h-8 rounded-full transition-colors duration-300 bg-black shadow-lg will-change-transform" style={{ transform: 'translate3d(-50%, -50%, 0)' }} />
-              )}
-            </div>
-
-            <div className="flex w-full max-w-sm flex-col gap-6">
-              {isActive && (
-                <div className="px-6 py-2 rounded-full bg-session border border-foreground/10 text-session text-sm font-black tracking-widest backdrop-blur-sm mx-auto mb-2 animate-in fade-in slide-in-from-bottom duration-500">
-                  {Math.floor(sessionTime / 60)}:{Math.floor(sessionTime % 60).toString().padStart(2, '0')} remaining
-                </div>
-              )}
-              <div className="flex w-full gap-4">
-                {!isActive ? (
-                  <button onClick={toggleActive} className="flex-1 py-5 rounded-2xl font-black text-xl bg-foreground text-background shadow-lg transition-all active:scale-95">Start</button>
-                ) : (
-                  <button onClick={reset} className="flex-1 py-5 rounded-2xl bg-session border border-foreground/10 text-session font-black text-xl hover:bg-foreground/10 active:scale-95">Reset</button>
-                )}
-              </div>
-              <div className="flex gap-6 items-center justify-center">
-                {PHASES.map((phase, i) => <div key={i} className={`w-3 h-3 rounded-full transition-all duration-500 ${currentPhaseIndex === i && isActive ? `${phase.bg} scale-150 shadow-sm` : 'bg-foreground/5'}`} />)}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeView === 'EYE_GYM' && (
-          <div className={`flex flex-col items-center gap-2 w-full animate-in fade-in duration-700 ${isActive ? 'h-screen justify-center' : 'pt-24 sm:pt-0'}`}>
-            {!isActive && (
-              <div className="flex flex-col items-center gap-4 w-full max-w-xl px-6 animate-in fade-in duration-700 mb-8">
-                <header className="flex flex-col items-center gap-2 text-center">
-                  <h1 className="text-4xl sm:text-6xl font-black tracking-tighter text-foreground/90 leading-none uppercase">
-                    {EXERCISES.find(ex => ex.id === eyeGymMode)?.title}
-                  </h1>
-                  <p className="text-foreground/30 font-bold uppercase tracking-[0.3em] text-[10px]">
-                    Visual Performance Protocol
+                <div className="space-y-2">
+                  <p className="text-[clamp(2.25rem,7vw,4rem)] font-light tracking-normal text-foreground">
+                    {isActive ? currentPhase.name : 'Ready'}
                   </p>
-                </header>
-
-                <div className="p-6 rounded-3xl bg-foreground/[0.02] border border-foreground/5 w-full space-y-3">
-                  <p className="text-foreground/60 text-sm sm:text-base font-medium leading-relaxed text-center italic">
-                    {EXERCISES.find(ex => ex.id === eyeGymMode)?.desc}
+                  <p className="text-sm font-normal text-foreground/42">
+                    {isActive ? currentPhase.hint : 'Quiet, even, unforced.'}
                   </p>
                 </div>
               </div>
-            )}
 
-            <div ref={containerRef} className={`relative transition-all duration-700 ease-out ${isActive ? 'w-screen h-screen' : 'w-[85vw] h-[25vh] max-w-7xl'}`}>
-              <div className={`absolute inset-0 border-2 border-foreground/5 bg-foreground/[0.01] transition-all duration-700 ${isActive ? 'rounded-none border-transparent' : 'rounded-3xl'}`} />
-              {!isActive && (
-                <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-[0.02] select-none pointer-events-none overflow-hidden scale-110">
-                  <div className="w-64 h-64 border-[40px] border-foreground rounded-full opacity-10" />
-                </div>
-              )}
               {isActive && (
                 <div
                   ref={dotRef}
-                  className="absolute left-0 top-0 w-8 h-8 rounded-full transition-colors duration-300 z-10 shadow-md will-change-transform bg-black"
-                  style={{
-                    transform: 'translate3d(-50%, -50%, 0)',
-                  }}
-                />
-              )}
-              {isActive && eyeGymMode === 'CONVERGENCE' && (
-                <div
-                  ref={secondDotRef}
-                  className="absolute left-0 top-0 w-8 h-8 rounded-full transition-colors duration-300 z-10 shadow-md will-change-transform bg-black"
-                  style={{
-                    transform: 'translate3d(-50%, -50%, 0)',
-                  }}
+                  className={`absolute left-0 top-0 h-4 w-4 rounded-full ${currentPhase.dotClass} shadow-[0_0_0_5px_color-mix(in_srgb,var(--phase-color)_12%,transparent)] will-change-transform transition-[background-color] duration-300 sm:h-5 sm:w-5`}
+                  style={{ transform: 'translate3d(-50%, -50%, 0)' }}
                 />
               )}
             </div>
 
-            <div className={`flex flex-col gap-4 sm:gap-6 transition-all duration-700 ${isActive ? 'absolute bottom-8 sm:bottom-12 left-1/2 -translate-x-1/2 w-full max-w-lg px-8' : 'w-full max-w-md px-6'}`}>
+            <div className="flex w-full max-w-xs flex-col gap-5">
               {isActive && (
-                <div className="flex flex-col items-center gap-3 sm:gap-4 animate-in fade-in slide-in-from-bottom duration-500">
-                  <div className="px-4 py-1.5 rounded-full bg-session border border-foreground/10 text-session text-[9px] font-black tracking-widest backdrop-blur-sm sm:text-[10px] sm:px-6 sm:py-2">
-                    {Math.floor(sessionTime / 60)}:{Math.floor(sessionTime % 60).toString().padStart(2, '0')} remaining
-                  </div>
+                <div className="mx-auto font-mono text-sm text-foreground/45">
+                  {formatTime(sessionTime)} remaining
+                </div>
+              )}
+
+              <div className="flex w-full gap-3">
+                {!isActive ? (
+                  <button onClick={toggleActive} className="flex-1 rounded-lg border border-foreground/14 bg-transparent px-5 py-4 text-base font-medium text-foreground transition-[background-color,border-color,transform] duration-200 hover:border-foreground/28 hover:bg-card/45 active:scale-[0.98]">
+                    Start
+                  </button>
+                ) : (
+                  <button onClick={reset} className="flex-1 rounded-lg border border-foreground/12 bg-transparent px-5 py-4 text-base font-medium text-foreground/62 transition-[background-color,border-color,transform] duration-200 hover:border-foreground/22 hover:bg-card/40 active:scale-[0.98]">
+                    Reset
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center justify-center gap-3">
+                {PHASES.map((phase, index) => (
+                  <span
+                    key={`${phase.name}-${phase.hint}`}
+                    className={`h-1.5 rounded-full transition-[background-color,width,opacity] duration-500 ${currentPhaseIndex === index && isActive ? 'w-7 opacity-90' : 'w-1.5 bg-foreground/14 opacity-70'}`}
+                    style={{ backgroundColor: currentPhaseIndex === index && isActive ? phase.color : undefined }}
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeView === 'EYE_GYM' && (
+          <section className={`flex w-full flex-col items-center ${isActive ? 'min-h-screen justify-center' : 'max-w-4xl gap-6'}`}>
+            {!isActive && (
+              <div className="flex w-full max-w-xl flex-col items-center gap-4 text-center">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-foreground/45">Visual performance</p>
+                  <h1 className="text-4xl font-semibold tracking-normal text-foreground sm:text-5xl">
+                    {currentExercise?.title}
+                  </h1>
+                </div>
+                <p className="max-w-lg text-sm leading-6 text-foreground/58">{currentExercise?.desc}</p>
+              </div>
+            )}
+
+            <div
+              ref={containerRef}
+              className={`relative overflow-hidden transition-[width,height,border-radius,background-color] duration-500 ease-out ${isActive ? 'h-screen w-screen bg-background' : 'h-[28vh] min-h-48 w-[min(92vw,960px)] rounded-lg border border-foreground/10 bg-card shadow-sm'}`}
+            >
+              {!isActive && (
+                <>
+                  <div className="absolute left-1/2 top-1/2 h-px w-4/5 -translate-x-1/2 bg-foreground/8" />
+                  <div className="absolute left-1/2 top-1/2 h-4/5 w-px -translate-y-1/2 bg-foreground/8" />
+                  <div className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/18" />
+                </>
+              )}
+
+              {isActive && (
+                <div
+                  ref={dotRef}
+                  className="absolute left-0 top-0 z-10 h-7 w-7 rounded-full bg-foreground shadow-[0_0_0_8px_hsl(var(--foreground)/0.08)] will-change-transform"
+                  style={{ transform: 'translate3d(-50%, -50%, 0)' }}
+                />
+              )}
+
+              {isActive && eyeGymMode === 'CONVERGENCE' && (
+                <div
+                  ref={secondDotRef}
+                  className="absolute left-0 top-0 z-10 h-7 w-7 rounded-full bg-primary shadow-[0_0_0_8px_hsl(var(--primary)/0.13)] will-change-transform"
+                  style={{ transform: 'translate3d(-50%, -50%, 0)' }}
+                />
+              )}
+            </div>
+
+            <div className={`flex w-full flex-col gap-4 transition-[opacity,transform] duration-500 ${isActive ? 'pointer-events-none fixed bottom-8 left-1/2 z-40 max-w-sm -translate-x-1/2 items-center px-4 sm:bottom-10' : 'max-w-md px-4'}`}>
+              {isActive && (
+                <div className="rounded-full border border-foreground/10 bg-session px-5 py-2 text-sm font-medium text-session backdrop-blur">
+                  {formatTime(sessionTime)} remaining
                 </div>
               )}
 
               {!isActive && (
-                <div className="flex w-full gap-4">
+                <div className="flex w-full gap-3">
                   <button
-                    onClick={toggleActive}
-                    className="flex-1 py-5 rounded-2xl font-black text-xl transition-all bg-foreground text-background shadow-lg active:scale-95"
+                    onClick={startExercise}
+                    className="flex-1 rounded-lg bg-foreground px-5 py-4 text-lg font-semibold text-background shadow-sm transition-[opacity,transform] duration-200 hover:opacity-90 active:scale-[0.98]"
                   >
                     Start
                   </button>
-                  <div className="flex flex-col justify-center gap-1 px-6 bg-foreground/5 border border-foreground/10 rounded-2xl">
-                    <span className="text-[8px] font-black uppercase tracking-widest text-foreground/30">Speed {speed.toFixed(1)}x</span>
+
+                  <label className="flex min-w-36 flex-col justify-center gap-2 rounded-lg border border-foreground/10 bg-card px-4">
+                    <span className="text-xs font-medium text-foreground/45">Speed {speed.toFixed(1)}x</span>
                     <input
-                      type="range" min="0.5" max="3" step="0.1" value={speed}
-                      onChange={(e) => setSpeed(parseFloat(e.target.value))}
-                      className="w-24 accent-foreground cursor-pointer h-1"
+                      type="range"
+                      min="0.5"
+                      max="3"
+                      step="0.1"
+                      value={speed}
+                      onChange={(event) => setSpeed(parseFloat(event.target.value))}
+                      className="h-1 w-full cursor-pointer accent-primary"
                     />
-                  </div>
+                  </label>
                 </div>
               )}
             </div>
-          </div>
+          </section>
         )}
-      </div>
+      </main>
 
-      {/* Fixed Top-Right Exit Button during session */}
       {isActive && (
         <button
           onClick={() => setIsActive(false)}
-          className="fixed top-6 right-6 z-[95] p-5 rounded-[1.5rem] bg-session border border-foreground/10 text-foreground active:scale-95 transition-all animate-in fade-in slide-in-from-top-4 duration-500 backdrop-blur-xl shadow-2xl"
-          title="Exit Session"
+          className="fixed right-4 top-4 z-[95] grid h-12 w-12 place-items-center rounded-lg border border-foreground/10 bg-session text-foreground/70 shadow-sm backdrop-blur transition-[background-color,color,transform] duration-200 hover:bg-card hover:text-foreground active:scale-95 sm:right-6 sm:top-6"
+          aria-label="Exit session"
+          title="Exit session"
         >
-          <svg viewBox="0 0 24 24" className="w-8 h-8 fill-current"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" /></svg>
+          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
+            <path d="m18.3 6.7-1-1L12 11 6.7 5.7l-1 1L11 12l-5.3 5.3 1 1L12 13l5.3 5.3 1-1L13 12l5.3-5.3z" />
+          </svg>
         </button>
       )}
 
-      {/* iOS Install Prompt - Premium Redesign */}
       {showIOSInstructions && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xl p-4 transition-all duration-500" onClick={() => setShowIOSInstructions(false)}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-foreground/30 p-4 backdrop-blur-sm sm:items-center" onClick={() => setShowIOSInstructions(false)}>
           <div
-            className="bg-card w-full max-w-sm p-8 space-y-8 rounded-[2.5rem] border border-foreground/10 animate-in slide-in-from-bottom sm:zoom-in duration-500 shadow-2xl"
-            onClick={e => e.stopPropagation()}
+            className="w-full max-w-sm space-y-6 rounded-lg border border-foreground/10 bg-card p-6 shadow-lg"
+            onClick={(event) => event.stopPropagation()}
           >
             <div className="space-y-2 text-center">
-              <div className="w-16 h-16 bg-foreground/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-foreground/5">
-                <svg viewBox="0 0 24 24" className="w-8 h-8 fill-foreground/20"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" /></svg>
+              <div className="mx-auto grid h-12 w-12 place-items-center rounded-lg bg-primary/10 text-primary">
+                <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden="true">
+                  <path d="M12 3 7 8h3v7h4V8h3l-5-5zM5 18h14v2H5v-2z" />
+                </svg>
               </div>
-              <h3 className="text-2xl font-black tracking-tight text-foreground/90">Install App</h3>
-              <p className="text-foreground/40 text-sm font-medium">Add this tool to your home screen for quick access during work.</p>
+              <h3 className="text-2xl font-semibold text-foreground">Install app</h3>
+              <p className="text-sm leading-6 text-foreground/58">Add this tool to your home screen for quick access.</p>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex gap-4 items-center p-4 bg-foreground/[0.03] rounded-2xl border border-foreground/5 transition-all hover:bg-foreground/[0.05]">
-                <span className="w-8 h-8 shrink-0 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-black shadow-lg">1</span>
-                <p className="text-sm font-bold text-foreground/70 leading-snug">
-                  Tap <span className="text-blue-400">Share</span> in your Safari browser
-                </p>
-              </div>
-              <div className="flex gap-4 items-center p-4 bg-foreground/[0.03] rounded-2xl border border-foreground/5 transition-all hover:bg-foreground/[0.05]">
-                <span className="w-8 h-8 shrink-0 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-black shadow-lg">2</span>
-                <p className="text-sm font-bold text-foreground/70 leading-snug">
-                  Select <span className="text-blue-400">Add to Home Screen</span> from the list
-                </p>
-              </div>
+            <div className="space-y-3">
+              {['Tap Share in Safari', 'Select Add to Home Screen'].map((step, index) => (
+                <div key={step} className="flex items-center gap-3 rounded-lg border border-foreground/10 bg-muted/45 p-3">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-foreground text-sm font-semibold text-background">
+                    {index + 1}
+                  </span>
+                  <p className="text-sm font-medium text-foreground/70">{step}</p>
+                </div>
+              ))}
             </div>
 
             <button
               onClick={() => setShowIOSInstructions(false)}
-              className="w-full py-5 bg-foreground text-background rounded-2xl font-black uppercase tracking-widest text-xs hover:opacity-90 active:scale-95 transition-all shadow-xl shadow-foreground/10"
+              className="w-full rounded-lg bg-foreground px-5 py-4 font-semibold text-background transition-[opacity,transform] duration-200 hover:opacity-90 active:scale-[0.98]"
             >
               Got it
             </button>
           </div>
         </div>
       )}
-      {/* Celebration Modal */}
+
       {showCelebration && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-2xl p-4 animate-in fade-in duration-500">
-          <div className="bg-card w-full max-w-sm p-10 space-y-8 rounded-[3rem] border border-foreground/10 text-center animate-in zoom-in slide-in-from-bottom-10 duration-700 shadow-2xl shadow-primary/20">
-            <div className="space-y-4">
-              <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-primary/20 relative">
-                <svg viewBox="0 0 24 24" className="w-12 h-12 fill-primary animate-bounce"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1c2.45-.39 4.31-2.4 4.89-4.7L18 9V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82c-1.13-.19-2-.84-2-1.82zm14 0c0 .98-.87 1.63-2 1.82V7h2v1z" /></svg>
-                <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping opacity-20" />
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-foreground/35 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm space-y-6 rounded-lg border border-foreground/10 bg-card p-7 text-center shadow-lg">
+            <div className="space-y-3">
+              <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-primary/10 text-primary">
+                <svg viewBox="0 0 24 24" className="h-8 w-8 fill-current" aria-hidden="true">
+                  <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.5 1.9 4.6 4.4 4.9.7 1.4 2 2.5 3.6 2.9V19H7v2h10v-2h-4v-3.2c1.6-.4 2.9-1.5 3.6-2.9C19.1 12.6 21 10.5 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.7C5.8 10.3 5 9.3 5 8zm14 0c0 1.3-.8 2.3-2 2.7V7h2v1z" />
+                </svg>
               </div>
-              <h3 className="text-3xl font-black tracking-tight text-foreground/90 leading-tight">Excellent Work!</h3>
-              <p className="text-foreground/50 text-base font-medium leading-relaxed">
-                You've successfully completed your {activeView === 'BREATHING' ? 'breathing' : 'eye gymnastics'} protocol. Your body and mind thank you.
+              <h3 className="text-3xl font-semibold text-foreground">Excellent work</h3>
+              <p className="text-sm leading-6 text-foreground/58">
+                You completed the {activeView === 'BREATHING' ? 'breathing' : 'eye gymnastics'} protocol.
               </p>
             </div>
 
             <button
-              onClick={() => { setShowCelebration(false); setActiveView('MENU'); }}
-              className="w-full py-5 bg-foreground text-background rounded-2xl font-black uppercase tracking-widest text-xs hover:opacity-90 active:scale-95 transition-all shadow-xl shadow-foreground/10"
+              onClick={() => {
+                setShowCelebration(false)
+                setActiveView('MENU')
+              }}
+              className="w-full rounded-lg bg-foreground px-5 py-4 font-semibold text-background transition-[opacity,transform] duration-200 hover:opacity-90 active:scale-[0.98]"
             >
-              Finish Session
+              Finish session
             </button>
           </div>
         </div>
       )}
 
-      {/* Optional Landscape Hint for mobile */}
       {showLandscapeHint && activeView === 'EYE_GYM' && isActive && (
-        <div className="fixed bottom-24 left-4 right-4 z-[90] sm:hidden animate-in slide-in-from-bottom duration-500">
-          <div className="bg-foreground/90 backdrop-blur-xl text-background p-4 rounded-2xl flex items-center gap-4 shadow-2xl">
-            <div className="w-10 h-10 border border-background/20 rounded-lg flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current rotate-90"><path d="M7 2h10c1.1 0 2 .9 2 2v16c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2zm0 4v12h10V6H7z" /></svg>
+        <div className="fixed bottom-20 left-4 right-4 z-[90] sm:hidden">
+          <div className="flex items-center gap-3 rounded-lg border border-foreground/10 bg-session p-3 text-session shadow-sm backdrop-blur">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-foreground/10">
+              <svg viewBox="0 0 24 24" className="h-5 w-5 rotate-90 fill-current" aria-hidden="true">
+                <path d="M7 2h10c1.1 0 2 .9 2 2v16c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2zm0 4v12h10V6H7z" />
+              </svg>
             </div>
-            <div className="flex-1">
-              <p className="text-[10px] font-bold leading-tight uppercase tracking-widest opacity-60">Pro Tip</p>
-              <p className="text-xs font-bold leading-tight">Landscape mode provides 2x more eye muscle amplitude.</p>
-            </div>
+            <p className="flex-1 text-xs font-medium leading-5">Landscape mode gives the eyes more room to move.</p>
             <button
               onClick={() => setShowLandscapeHint(false)}
-              className="p-2 ml-2 hover:bg-background/10 rounded-full transition-colors"
+              className="grid h-8 w-8 place-items-center rounded-lg text-session transition-[background-color] duration-200 hover:bg-foreground/10"
+              aria-label="Dismiss landscape hint"
             >
-              <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" /></svg>
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                <path d="m18.3 6.7-1-1L12 11 6.7 5.7l-1 1L11 12l-5.3 5.3 1 1L12 13l5.3 5.3 1-1L13 12l5.3-5.3z" />
+              </svg>
             </button>
           </div>
         </div>
