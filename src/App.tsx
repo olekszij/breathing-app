@@ -589,17 +589,6 @@ function App() {
       <main className={`relative z-10 flex min-h-screen w-full flex-col items-center ${activeView === 'MENU' && !isActive ? 'justify-start px-4 py-6 sm:justify-center sm:py-10' : isActive && activeView === 'EYE_GYM' ? 'justify-center' : 'justify-center px-4 py-16 sm:py-20'}`}>
         {activeView === 'MENU' && (
           <section className="relative w-full max-w-[460px] overflow-hidden rounded-[2rem] bg-[#faf9f4] p-5 text-[#0b0d16] shadow-[0_28px_90px_hsl(24_30%_18%/0.24)] sm:max-w-[520px] sm:p-7">
-            <div className="mb-7 flex items-center justify-between text-sm font-black tracking-tight">
-              <div className="inline-flex items-center">
-                <span className="grid h-6 w-6 place-items-center rounded-full bg-[#0b0d16] text-[#faf9f4]">
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
-                    <path d="M12 2c1.3 3.2 3.4 5.3 6.7 6.5-3.3 1.2-5.4 3.3-6.7 6.5-1.3-3.2-3.4-5.3-6.7-6.5C8.6 7.3 10.7 5.2 12 2zm-6.5 9c.7 1.7 1.8 2.8 3.5 3.5-1.7.7-2.8 1.8-3.5 3.5-.7-1.7-1.8-2.8-3.5-3.5 1.7-.7 2.8-1.8 3.5-3.5zm13 3c.6 1.5 1.6 2.5 3 3-1.4.5-2.4 1.5-3 3-.6-1.5-1.6-2.5-3-3 1.4-.5 2.4-1.5 3-3z" />
-                  </svg>
-                </span>
-              </div>
-              <span className="font-semibold text-[#0b0d16]/45">{formatTime(sessionTime)}</span>
-            </div>
-
             <div className="mb-6 space-y-2">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0b0d16]/38">Daily protocols</p>
               <h1 className="max-w-sm break-words text-[clamp(3rem,14vw,5.4rem)] font-black leading-[0.86] tracking-normal text-[#0b0d16]">
@@ -646,17 +635,6 @@ function App() {
           <section className={`flex w-full flex-col items-center ${isActive ? 'gap-7' : 'max-w-[460px] gap-5 sm:max-w-[520px]'}`}>
             {!isActive ? (
               <div className="w-full overflow-hidden rounded-[2rem] bg-[#faf9f4] p-5 text-[#0b0d16] shadow-[0_28px_90px_hsl(24_30%_18%/0.24)] sm:p-6">
-                <div className="mb-7 flex items-center justify-between text-sm font-black tracking-tight">
-                  <div className="inline-flex items-center">
-                    <span className="grid h-6 w-6 place-items-center rounded-full bg-[#0b0d16] text-[#faf9f4]">
-                      <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
-                        <path d="M12 2c1.3 3.2 3.4 5.3 6.7 6.5-3.3 1.2-5.4 3.3-6.7 6.5-1.3-3.2-3.4-5.3-6.7-6.5C8.6 7.3 10.7 5.2 12 2z" />
-                      </svg>
-                    </span>
-                  </div>
-                  <span className="font-semibold text-[#0b0d16]/45">4-4-4-4</span>
-                </div>
-
                 <div className="mb-5 space-y-2">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0b0d16]/38">Nervous system</p>
                   <h1 className="max-w-full break-words text-[clamp(2.75rem,11vw,5rem)] font-black leading-[0.86] tracking-normal text-[#0b0d16]">
@@ -793,19 +771,6 @@ function App() {
           <section className={`flex w-full flex-col items-center ${isActive ? 'min-h-screen justify-center' : 'max-w-[460px] gap-5 sm:max-w-[520px]'}`}>
             {!isActive ? (
               <div className="w-full overflow-hidden rounded-[2rem] bg-[#faf9f4] p-5 text-[#0b0d16] shadow-[0_28px_90px_hsl(24_30%_18%/0.24)] sm:p-6">
-                <div className="mb-7 flex items-center justify-between text-sm font-black tracking-tight">
-                  <div className="inline-flex items-center">
-                    <span className="grid h-6 w-6 place-items-center rounded-full bg-[#0b0d16] text-[#faf9f4]">
-                      <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
-                        <path d="M12 2c1.3 3.2 3.4 5.3 6.7 6.5-3.3 1.2-5.4 3.3-6.7 6.5-1.3-3.2-3.4-5.3-6.7-6.5C8.6 7.3 10.7 5.2 12 2z" />
-                      </svg>
-                    </span>
-                  </div>
-                  <span className="font-semibold text-[#0b0d16]/45">
-                    {formatTime(currentExercise?.durationSeconds ?? 60)}
-                  </span>
-                </div>
-
                 <div className="mb-5 space-y-3">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0b0d16]/38">Eye reset</p>
                   <h1 className="max-w-full break-words text-[clamp(2.75rem,11vw,5rem)] font-black leading-[0.86] tracking-normal text-[#0b0d16]">
