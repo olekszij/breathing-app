@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { GiLips, GiNoseSide } from 'react-icons/gi'
 
 type AppView = 'MENU' | 'BREATHING' | 'EYE_GYM'
+type BreathingMode = 'BREATHING' | 'COHERENT'
 type EyeGymMode = 'DISTANCE' | 'PURSUIT' | 'SACCADES' | 'BLINK'
 
 type BeforeInstallPromptEvent = Event & {
@@ -40,8 +41,14 @@ type ExerciseBase = {
 }
 
 type BreathingExercise = ExerciseBase & {
-  id: 'BREATHING'
+  id: BreathingMode
   type: 'BREATHING'
+  cycleMs: number
+  phases: Phase[]
+  previewTitle: string
+  previewHint: string
+  previewStyle: string
+  tag: string
 }
 
 type EyeExercise = ExerciseBase & {
@@ -51,7 +58,16 @@ type EyeExercise = ExerciseBase & {
 
 type Exercise = BreathingExercise | EyeExercise
 
-const PHASES: Phase[] = [
+const HOME_CARD_STYLES = [
+  'bg-[#bfe6b8]',
+  'bg-[#cfe3f1]',
+  'bg-[#f18873]',
+  'bg-[#f5ad3f]',
+  'bg-[#f4d489]',
+  'bg-[#e6e1da]',
+]
+
+const SQUARE_PHASES: Phase[] = [
   {
     name: 'Inhale',
     hint: 'Inhale through nose',
@@ -92,6 +108,23 @@ const PHASES: Phase[] = [
   },
 ]
 
+const COHERENT_PHASES: Phase[] = [
+  {
+    name: 'Inhale',
+    hint: 'Five seconds in',
+    color: 'var(--color-inhale)',
+    dotClass: 'bg-inhale',
+    icon: <GiNoseSide className="h-24 w-24" aria-hidden="true" />,
+  },
+  {
+    name: 'Exhale',
+    hint: 'Five seconds out',
+    color: 'var(--color-exhale)',
+    dotClass: 'bg-exhale',
+    icon: <GiLips className="h-24 w-24" aria-hidden="true" />,
+  },
+]
+
 const EXERCISES: Exercise[] = [
   {
     id: 'BREATHING',
@@ -101,7 +134,36 @@ const EXERCISES: Exercise[] = [
     desc: 'A quiet 4-4-4-4 breathing loop for settling the nervous system.',
     color: 'text-primary',
     soft: 'bg-primary/10',
+    durationSeconds: 120,
+    cycleMs: 16000,
+    phases: SQUARE_PHASES,
+    previewTitle: 'calm loop',
+    previewHint: 'Inhale nose, pause, exhale mouth, pause.',
+    previewStyle: HOME_CARD_STYLES[0],
+    tag: 'Nervous system',
     icon: <div className="h-7 w-7 rounded-lg border-2 border-current" aria-hidden="true" />,
+  },
+  {
+    id: 'COHERENT',
+    type: 'BREATHING',
+    title: 'Coherent Breath',
+    subtitle: '5 sec in/out',
+    desc: 'A soft 5-second inhale and 5-second exhale rhythm.',
+    color: 'text-primary',
+    soft: 'bg-primary/10',
+    durationSeconds: 180,
+    cycleMs: 10000,
+    phases: COHERENT_PHASES,
+    previewTitle: 'soft wave',
+    previewHint: 'Breathe evenly without holds.',
+    previewStyle: HOME_CARD_STYLES[1],
+    tag: 'Calm rhythm',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-7 w-7 fill-none stroke-current" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 12c2.3-4 4.7-4 7 0s4.7 4 7 0 3.3-4 4-4" />
+        <path d="M3 17c2.3-4 4.7-4 7 0s4.7 4 7 0 3.3-4 4-4" opacity="0.45" />
+      </svg>
+    ),
   },
   {
     id: 'DISTANCE',
@@ -159,20 +221,13 @@ const EXERCISES: Exercise[] = [
     soft: 'bg-primary/10',
     durationSeconds: 60,
     icon: (
-      <svg viewBox="0 0 24 24" className="h-7 w-7 fill-current" aria-hidden="true">
-        <path d="M12 5.5c4.2 0 7.4 2.1 9.2 6-.7 1.4-1.7 2.6-3 3.5l-1.4-1.4c.7-.5 1.3-1.2 1.8-2.1-1.5-2.6-3.8-4-6.6-4s-5.1 1.4-6.6 4c1.5 2.6 3.8 4 6.6 4 .7 0 1.4-.1 2-.3l1.6 1.6c-1.1.5-2.3.7-3.6.7-4.2 0-7.4-2.1-9.2-6 1.8-3.9 5-6 9.2-6z" />
-        <path d="m4.3 3 16.7 16.7-1.4 1.4L2.9 4.4 4.3 3z" />
+      <svg viewBox="0 0 24 24" className="h-7 w-7 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 8.5C5.1 5.8 8.1 4.4 12 4.4s6.9 1.4 9 4.1c-2.1 2.7-5.1 4.1-9 4.1S5.1 11.2 3 8.5z" />
+        <circle cx="12" cy="8.5" r="2.1" className="fill-current stroke-none" />
+        <path d="M5 18.2c2 1.2 4.3 1.8 7 1.8s5-.6 7-1.8" />
       </svg>
     ),
   },
-]
-
-const HOME_CARD_STYLES = [
-  'bg-[#bfe6b8]',
-  'bg-[#f18873]',
-  'bg-[#f5ad3f]',
-  'bg-[#f4d489]',
-  'bg-[#e6e1da]',
 ]
 
 const formatTime = (seconds: number) => (
@@ -210,8 +265,10 @@ function App() {
   const [showGrid, setShowGrid] = useState(getStoredGridPreference)
   const [isImmersive, setIsImmersive] = useState(false)
   const [isNativeFullscreen, setIsNativeFullscreen] = useState(false)
+  const [blinkClosed, setBlinkClosed] = useState(false)
   const [speed, setSpeed] = useState(1)
   const [sessionTime, setSessionTime] = useState(120)
+  const [breathingMode, setBreathingMode] = useState<BreathingMode>('BREATHING')
   const [eyeGymMode, setEyeGymMode] = useState<EyeGymMode>('DISTANCE')
 
   const currentPhaseIndexRef = useRef(0)
@@ -225,13 +282,18 @@ function App() {
   const speedRef = useRef(speed)
   const saccadeTimerRef = useRef(0)
   const saccadeTargetRef = useRef({ x: 0, y: 0 })
+  const blinkClosedRef = useRef(false)
 
-  const currentPhase = PHASES[currentPhaseIndex] || PHASES[0]
+  const currentBreathingExercise = EXERCISES.find((exercise): exercise is BreathingExercise => (
+    exercise.type === 'BREATHING' && exercise.id === breathingMode
+  )) ?? EXERCISES[0] as BreathingExercise
+  const breathingPhases = currentBreathingExercise.phases
+  const currentPhase = breathingPhases[currentPhaseIndex] || breathingPhases[0]
   const currentExercise = EXERCISES.find((exercise) => exercise.id === eyeGymMode)
   const currentExerciseIndex = Math.max(0, EXERCISES.findIndex((exercise) => exercise.id === eyeGymMode))
   const currentExerciseStyle = HOME_CARD_STYLES[currentExerciseIndex % HOME_CARD_STYLES.length]
-  const breathingPreviewStyle = HOME_CARD_STYLES[0]
-  const currentSessionDuration = activeView === 'BREATHING' ? 120 : (currentExercise?.durationSeconds ?? 60)
+  const breathingPreviewStyle = currentBreathingExercise.previewStyle
+  const currentSessionDuration = activeView === 'BREATHING' ? currentBreathingExercise.durationSeconds ?? 120 : (currentExercise?.durationSeconds ?? 60)
   const showSpeedControl = eyeGymMode === 'PURSUIT' || eyeGymMode === 'SACCADES'
   const useFullScreenEyeField = eyeGymMode === 'PURSUIT' || eyeGymMode === 'SACCADES'
   const activeEyePrompt = eyeGymMode === 'DISTANCE'
@@ -348,8 +410,8 @@ function App() {
       elapsedRef.current += delta * speedRef.current
 
       if (activeView === 'BREATHING') {
-        const duration = 16000
-        const phaseDuration = duration / PHASES.length
+        const duration = currentBreathingExercise.cycleMs
+        const phaseDuration = duration / breathingPhases.length
         const time = elapsedRef.current % duration
         const phaseIdx = Math.floor(time / phaseDuration)
 
@@ -365,20 +427,28 @@ function App() {
         if (path && dot && width > 0 && height > 0) {
           const phaseElapsed = time % phaseDuration
           const easedPhaseProgress = smootherStep(phaseElapsed / phaseDuration)
-          const pathLength = path.getTotalLength()
-          const pathPosition = ((phaseIdx + easedPhaseProgress) / PHASES.length) * pathLength
-          const point = path.getPointAtLength(pathPosition)
-          const x = (point.x / 100) * width
-          const y = (point.y / 100) * height
-          const previous = breathPointRef.current ?? { x, y }
-          const damping = 1 - Math.exp(-delta / 120)
-          const smoothed = {
-            x: lerp(previous.x, x, damping),
-            y: lerp(previous.y, y, damping),
-          }
 
-          breathPointRef.current = smoothed
-          dot.style.transform = `translate3d(${smoothed.x}px, ${smoothed.y}px, 0) translate3d(-50%, -50%, 0)`
+          if (breathingMode === 'COHERENT') {
+            const progress = phaseIdx === 0 ? easedPhaseProgress : 1 - easedPhaseProgress
+
+            dot.style.opacity = '1'
+            dot.style.transform = `scaleX(${Math.max(0.025, progress)})`
+          } else {
+            const pathLength = path.getTotalLength()
+            const pathPosition = ((phaseIdx + easedPhaseProgress) / breathingPhases.length) * pathLength
+            const point = path.getPointAtLength(pathPosition)
+            const x = (point.x / 100) * width
+            const y = (point.y / 100) * height
+            const previous = breathPointRef.current ?? { x, y }
+            const damping = 1 - Math.exp(-delta / 120)
+            const smoothed = {
+              x: lerp(previous.x, x, damping),
+              y: lerp(previous.y, y, damping),
+            }
+
+            breathPointRef.current = smoothed
+            dot.style.transform = `translate3d(${smoothed.x}px, ${smoothed.y}px, 0) translate3d(-50%, -50%, 0)`
+          }
         }
       }
 
@@ -391,11 +461,16 @@ function App() {
         const centerY = areaHeight / 2
 
         if (eyeGymMode === 'BLINK') {
-          const cycle = (t * 0.45) % 1
-          const scaleY = cycle < 0.18 ? 0.18 : 1
-          const opacity = cycle < 0.18 ? 0.45 : 1
-          dotRef.current.style.opacity = `${opacity}`
-          dotRef.current.style.transform = `translate3d(${centerX}px, ${centerY}px, 0) translate3d(-50%, -50%, 0) scaleY(${scaleY})`
+          const cycle = (t * 0.42) % 1
+          const isClosed = cycle > 0.68 && cycle < 0.88
+
+          if (blinkClosedRef.current !== isClosed) {
+            blinkClosedRef.current = isClosed
+            setBlinkClosed(isClosed)
+          }
+
+          dotRef.current.style.opacity = '1'
+          dotRef.current.style.transform = `translate3d(${centerX}px, ${centerY}px, 0) translate3d(-50%, -50%, 0)`
         }
 
         if (eyeGymMode === 'PURSUIT') {
@@ -434,7 +509,7 @@ function App() {
 
     frameId = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frameId)
-  }, [isActive, activeView, eyeGymMode])
+  }, [isActive, activeView, eyeGymMode, breathingMode, currentBreathingExercise.cycleMs, breathingPhases])
 
   const resetMotion = () => {
     elapsedRef.current = 0
@@ -442,11 +517,15 @@ function App() {
     currentPhaseIndexRef.current = 0
     saccadeTimerRef.current = 0
     saccadeTargetRef.current = { x: 0, y: 0 }
+    blinkClosedRef.current = false
     breathPointRef.current = null
     setCurrentPhaseIndex(0)
+    setBlinkClosed(false)
 
     if (dotRef.current) {
-      dotRef.current.style.transform = 'translate3d(50%, 50%, 0) translate3d(-50%, -50%, 0) scale(1)'
+      dotRef.current.style.transform = activeView === 'BREATHING' && breathingMode === 'COHERENT'
+        ? 'scaleX(0.025)'
+        : 'translate3d(50%, 50%, 0) translate3d(-50%, -50%, 0) scale(1)'
       dotRef.current.style.opacity = '1'
     }
   }
@@ -477,6 +556,7 @@ function App() {
     setSpeed(1)
 
     if (exercise.type === 'BREATHING') {
+      setBreathingMode(exercise.id)
       setSessionTime(exercise.durationSeconds ?? 120)
       setActiveView('BREATHING')
       return
@@ -636,9 +716,9 @@ function App() {
             {!isActive ? (
               <div className="w-full overflow-hidden rounded-[2rem] bg-[#faf9f4] p-5 text-[#0b0d16] shadow-[0_28px_90px_hsl(24_30%_18%/0.24)] sm:p-6">
                 <div className="mb-5 space-y-2">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0b0d16]/38">Nervous system</p>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0b0d16]/38">{currentBreathingExercise.tag}</p>
                   <h1 className="max-w-full break-words text-[clamp(2.75rem,11vw,5rem)] font-black leading-[0.86] tracking-normal text-[#0b0d16]">
-                    Square Breath
+                    {currentBreathingExercise.title}
                   </h1>
                 </div>
 
@@ -658,21 +738,27 @@ function App() {
                   </svg>
 
                   <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-7 sm:p-8">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="grid h-20 w-20 place-items-center rounded-full bg-[#0b0d16]/10 text-[#0b0d16] sm:h-24 sm:w-24">
-                        <GiNoseSide className="h-14 w-14 sm:h-16 sm:w-16" aria-hidden="true" />
+                    {breathingMode === 'COHERENT' ? (
+                      <div className="grid h-24 w-24 place-items-center rounded-full bg-[#0b0d16]/10 text-[#0b0d16] [&_svg]:h-16 [&_svg]:w-16 sm:h-28 sm:w-28 sm:[&_svg]:h-20 sm:[&_svg]:w-20">
+                        {currentBreathingExercise.icon}
                       </div>
-                      <div className="grid h-16 w-16 place-items-center rounded-full bg-[#0b0d16]/10 text-[#0b0d16] sm:h-20 sm:w-20">
-                        <GiLips className="h-12 w-12 sm:h-14 sm:w-14" aria-hidden="true" />
+                    ) : (
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="grid h-20 w-20 place-items-center rounded-full bg-[#0b0d16]/10 text-[#0b0d16] sm:h-24 sm:w-24">
+                          <GiNoseSide className="h-14 w-14 sm:h-16 sm:w-16" aria-hidden="true" />
+                        </div>
+                        <div className="grid h-16 w-16 place-items-center rounded-full bg-[#0b0d16]/10 text-[#0b0d16] sm:h-20 sm:w-20">
+                          <GiLips className="h-12 w-12 sm:h-14 sm:w-14" aria-hidden="true" />
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     <div className="max-w-[14rem]">
                       <p className="max-w-full break-words text-[clamp(2.2rem,9vw,4.1rem)] font-black leading-[0.88] tracking-normal">
-                        calm loop
+                        {currentBreathingExercise.previewTitle}
                       </p>
                       <p className="mt-3 text-sm font-semibold leading-5 text-[#0b0d16]/68">
-                        Inhale nose, pause, exhale mouth, pause.
+                        {currentBreathingExercise.previewHint}
                       </p>
                     </div>
                   </div>
@@ -687,7 +773,7 @@ function App() {
                   </button>
 
                   <div className="flex items-center justify-center gap-3">
-                    {PHASES.map((phase, index) => (
+                    {breathingPhases.map((phase, index) => (
                       <span
                         key={`${phase.name}-${phase.hint}`}
                         className={`h-2 rounded-full bg-[#0b0d16]/20 ${index === 0 ? 'w-8' : 'w-2'}`}
@@ -729,14 +815,27 @@ function App() {
                       <p className="text-sm font-bold text-[#0b0d16]/58">
                         {currentPhase.hint}
                       </p>
+                      {breathingMode === 'COHERENT' && (
+                        <div className="mx-auto mt-7 w-[min(72vw,520px)] max-w-full">
+                          <div className="h-3 overflow-hidden rounded-full bg-[#0b0d16]/10 sm:h-4">
+                            <div
+                              ref={dotRef}
+                              className="h-full w-full origin-left rounded-full bg-current will-change-transform transition-[background-color,color] duration-300"
+                              style={{ color: currentPhase.color, transform: 'scaleX(0.025)' }}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div
-                    ref={dotRef}
-                    className={`absolute left-0 top-0 h-4 w-4 rounded-full ${currentPhase.dotClass} will-change-transform transition-[background-color] duration-300 sm:h-5 sm:w-5`}
-                    style={{ transform: 'translate3d(-50%, -50%, 0)' }}
-                  />
+                  {breathingMode !== 'COHERENT' && (
+                    <div
+                      ref={dotRef}
+                      className={`absolute left-0 top-0 h-4 w-4 rounded-full ${currentPhase.dotClass} will-change-transform transition-[background-color] duration-300 sm:h-5 sm:w-5`}
+                      style={{ transform: 'translate3d(-50%, -50%, 0)' }}
+                    />
+                  )}
                 </div>
 
                 <div className="flex w-full max-w-sm flex-col items-center gap-4">
@@ -745,7 +844,7 @@ function App() {
                   </div>
 
                   <div className="flex items-center justify-center gap-3">
-                    {PHASES.map((phase, index) => (
+                    {breathingPhases.map((phase, index) => (
                       <span
                         key={`${phase.name}-${phase.hint}`}
                         className={`h-2 rounded-full transition-[background-color,width,opacity] duration-500 ${currentPhaseIndex === index ? 'w-9 opacity-100' : 'w-2 bg-[#0b0d16]/16 opacity-70'}`}
@@ -868,10 +967,32 @@ function App() {
                     </div>
                   )}
 
-                  {eyeGymMode !== 'DISTANCE' && (
+                  {eyeGymMode === 'BLINK' && (
                     <div
                       ref={dotRef}
-                      className={`absolute left-0 top-0 z-20 bg-[#0b0d16] shadow-[0_0_0_9px_hsl(230_14%_8%/0.10)] will-change-transform ${eyeGymMode === 'BLINK' ? 'h-10 w-28 rounded-full' : 'h-8 w-8 rounded-full'}`}
+                      className="absolute left-0 top-0 z-20 h-28 w-28 text-[#0b0d16] will-change-transform sm:h-32 sm:w-32"
+                      style={{ transform: 'translate3d(-50%, -50%, 0)' }}
+                    >
+                      {blinkClosed ? (
+                        <svg viewBox="0 0 120 120" className="h-full w-full fill-none stroke-current transition-opacity duration-150" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M18 66c13 12 27 18 42 18s29-6 42-18" />
+                          <path d="M34 82l-8 10" />
+                          <path d="M60 88v12" />
+                          <path d="M86 82l8 10" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 120 120" className="h-full w-full fill-none stroke-current transition-opacity duration-150" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M14 60c11-19 27-28 46-28s35 9 46 28c-11 19-27 28-46 28S25 79 14 60z" />
+                          <circle cx="60" cy="60" r="13" className="fill-current stroke-none" />
+                        </svg>
+                      )}
+                    </div>
+                  )}
+
+                  {eyeGymMode !== 'DISTANCE' && eyeGymMode !== 'BLINK' && (
+                    <div
+                      ref={dotRef}
+                      className="absolute left-0 top-0 z-20 h-8 w-8 rounded-full bg-[#0b0d16] shadow-[0_0_0_9px_hsl(230_14%_8%/0.10)] will-change-transform"
                       style={{ transform: 'translate3d(-50%, -50%, 0)' }}
                     />
                   )}
